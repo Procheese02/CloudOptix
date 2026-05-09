@@ -119,6 +119,7 @@ CloudOptix is intentionally designed with infrastructure safety controls:
 ├── tool.py                   # Human-approved AWS execution tool
 ├── generate_mock.py          # Reproducible dynamic EC2 mock fleet generator
 ├── fetch_cost_explorer.py    # Optional read-only AWS Cost Explorer exporter
+├── fetch_aws_pricing.py      # Optional AWS Pricing API exporter for real EC2 On-Demand prices
 ├── analyze_billing.py        # Billing feature analysis and data quality checks
 ├── build_rag.py              # Local RAG index builder
 ├── test_llm.py               # LLM connectivity test
@@ -162,7 +163,15 @@ Do not commit `.env` to GitHub.
 
 ### 4. Build the local RAG index
 
-`build_rag.py` loads structured pricing and downgrade rules from `data/aws_pricing.json`, converts them into tagged chunks such as `category=compute`, `scope=ec2`, and `action=downsizing`, and then stores them in Qdrant. The Markdown pricing document remains as human-readable documentation and fallback context.
+`build_rag.py` loads structured pricing and downgrade rules from `data/aws_pricing.json`, converts them into tagged chunks such as `category=compute`, `scope=ec2`, and `action=downsizing`, and then stores them in Qdrant. The bundled JSON is a local demo baseline; the Markdown pricing document remains as human-readable documentation and fallback context.
+
+To refresh the pricing baseline with real AWS Linux shared-tenancy On-Demand EC2 prices, run the optional AWS Pricing API exporter first:
+
+```bash
+python3 fetch_aws_pricing.py --region us-east-1 --output data/aws_pricing.json
+```
+
+This only updates the pricing knowledge base. Real rightsizing still requires utilization data from the mock workflow today, or from future CloudWatch / Compute Optimizer enrichment.
 
 ```bash
 python3 build_rag.py
