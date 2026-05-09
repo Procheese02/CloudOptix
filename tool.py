@@ -152,23 +152,64 @@ def load_billing_data() -> dict:
         return json.load(file)
 
 
+def _parse_percent(value: object) -> float:
+    return float(str(value).strip().strip("%"))
+
+
+def get_instances(billing_data: dict) -> list[dict]:
+    instances = billing_data.get("instances")
+    if isinstance(instances, list):
+        return instances
+    if billing_data.get("instance_id"):
+        return [billing_data]
+    return []
+
+
+def is_execution_candidate(instance: dict) -> bool:
+    metrics = instance.get("metrics", {})
+    avg_cpu = _parse_percent(metrics.get("avg_cpu_utilization", "100%"))
+    peak_cpu = _parse_percent(metrics.get("peak_cpu_utilization", "100%"))
+    avg_memory = _parse_percent(metrics.get("avg_memory_utilization", "100%"))
+    return avg_cpu < 10.0 and peak_cpu <= 30.0 and avg_memory < 20.0 and not instance.get("protected")
+
+
 def build_action_result(billing_data: dict, execute: bool) -> str:
-    instance_id = billing_data.get("instance_id")
-    instance_type = billing_data.get("instance_type")
-    if not instance_id or not instance_type:
-        return "账单缺少 instance_id 或 instance_type，无法生成自动降级计划。"
+    instances = get_instances(billing_data)
+    if not instances:
+        return "账单缺少 EC2 实例信息，无法生成自动降级计划。"
 
-    target_type = get_target_instance_type(instance_type)
+    candidates = [instance for instance in instances if is_execution_candidate(instance)]
+    if not candidates:
+        return "No action: 没有可自动执行的低利用率 EC2 实例。"
+
     mode = "execute" if execute else "dry-run"
-    print_action_plan(instance_id, instance_type, target_type, mode)
+    action_results = []
+    for instance in candidates:
+        instance_id = instance.get("instance_id")
+        instance_type = instance.get("instance_type")
+        if not instance_id or not instance_type:
+            action_results.append("Skipped: 账单条目缺少 instance_id 或 instance_type。")
+            continue
 
-    if not execute:
-        return f"Dry run: would downgrade {instance_id} from {instance_type} to {target_type}. No AWS changes were made."
+        try:
+            target_type = get_target_instance_type(instance_type)
+        except ValueError as exc:
+            action_results.append(f"Skipped: {instance_id} 无法自动降级。原因: {exc}")
+            continue
 
-    return execute_aws_downgrade.invoke({
-        "instance_id": instance_id,
-        "target_type": target_type,
-    })
+        print_action_plan(instance_id, instance_type, target_type, mode)
+
+        if not execute:
+            action_results.append(
+                f"Dry run: would downgrade {instance_id} from {instance_type} to {target_type}. No AWS changes were made."
+            )
+        else:
+            action_results.append(execute_aws_downgrade.invoke({
+                "instance_id": instance_id,
+                "target_type": target_type,
+            }))
+
+    return "\n".join(action_results)
 
 
 def main() -> None:
@@ -210,7 +251,7 @@ def main() -> None:
         print(final_state.get("action_taken", "无执行记录"))
         print("=" * 40 + "\n")
     else:
-        print("\n✅ 巡检结束：该实例运行良好，无需优化。")
+        print("\n✅ 巡检结束：EC2 fleet 运行良好，无需优化。")
 
 
 if __name__ == "__main__":
