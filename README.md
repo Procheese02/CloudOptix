@@ -18,7 +18,7 @@ CloudOptix helps identify these waste patterns and produces explainable rightsiz
 
 CloudOptix uses a multi-agent workflow to:
 
-1. Load mock AWS billing and utilization data for multiple EC2 instances.
+1. Load mock AWS billing and utilization data for multiple EC2 instances by default, or optionally load read-only AWS Cost Explorer cost data exported into the same JSON shape.
 2. Detect underutilized EC2 instances and resources that should not be changed.
 3. Retrieve pricing rules and downgrade policies from a local RAG knowledge base.
 4. Generate a Markdown fleet-level cost optimization report with top savings opportunities, risk levels, and execution order.
@@ -55,6 +55,7 @@ The current version focuses on AWS EC2 rightsizing.
 Implemented features:
 
 - Mock AWS fleet billing data ingestion
+- Optional read-only AWS Cost Explorer cost export into the same billing JSON structure
 - Dynamic mock EC2 fleet generator with 50+ reproducible instances
 - Low-utilization instance detection across multiple EC2 instances
 - Protected-resource detection for instances that should not be changed
@@ -86,7 +87,9 @@ These are planned as future extensions.
 CloudOptix is intentionally designed with infrastructure safety controls:
 
 - No cloud credentials are hardcoded in source code.
-- AWS credentials are loaded from `.env`.
+- The default demo uses generated mock data, so it is free, stable, and reproducible.
+- AWS credentials are loaded from `.env` only when using optional AWS integrations.
+- The Cost Explorer importer is read-only and only writes a local JSON file.
 - Human confirmation is required before EC2 modification.
 - AWS region values are validated and availability zones such as `us-east-2c` are corrected to regions such as `us-east-2`.
 - AWS permission errors and free-tier restrictions are handled gracefully.
@@ -110,6 +113,7 @@ CloudOptix is intentionally designed with infrastructure safety controls:
 ├── agent.py                  # LangGraph optimization workflow
 ├── tool.py                   # Human-approved AWS execution tool
 ├── generate_mock.py          # Reproducible dynamic EC2 mock fleet generator
+├── fetch_cost_explorer.py    # Optional read-only AWS Cost Explorer exporter
 ├── build_rag.py              # Local RAG index builder
 ├── test_llm.py               # LLM connectivity test
 ├── requirements.txt          # Python dependencies
@@ -157,11 +161,29 @@ python3 build_rag.py
 
 ### 5. Generate mock EC2 fleet data
 
+The default workflow uses `generate_mock.py`. This path is free, stable, and reproducible, so it is the recommended demo mode.
+
 ```bash
 python3 generate_mock.py --fleet-size 60 --seed 42 --output data/mock_billing.json
 ```
 
 The generator creates a reproducible 50+ instance EC2 fleet with healthy, underutilized, protected, minimum-size, and temporary autoscaling instances. The generated JSON stays local by default because `data/*.json` is ignored; rerun the command whenever you want to refresh the demo data.
+
+### Optional: export read-only AWS Cost Explorer data
+
+If you want to inspect real AWS billing cost data without replacing the mock demo, run the optional Cost Explorer exporter:
+
+```bash
+python3 fetch_cost_explorer.py --start 2026-04-01 --end 2026-05-01 --output data/cost_explorer_billing.json
+```
+
+This script only reads AWS Cost Explorer and writes a local JSON file with the same top-level shape as `data/mock_billing.json`. It requires AWS credentials with Cost Explorer read permissions, such as `ce:GetCostAndUsage`. Cost Explorer does not include CPU, memory, ownership, or workload data, so exported records are marked `protected` by default. This makes the exported file suitable for real cost analysis and bill-import demos, but not for automatic downgrade execution.
+
+To try the agent against the exported Cost Explorer file without replacing the mock demo input, pass it explicitly:
+
+```bash
+python3 tool.py --dry-run --billing-file data/cost_explorer_billing.json
+```
 
 ### 6. Run the optimization workflow
 
@@ -179,12 +201,13 @@ python3 tool.py --execute
 
 The workflow will:
 
-1. Generate or refresh mock billing data in `data/mock_billing.json`.
-2. Load billing data from `data/mock_billing.json`.
-3. Analyze which EC2 instances are underutilized and which resources should not be changed.
-4. Retrieve relevant pricing rules from the local knowledge base.
-5. Generate a fleet-level cost optimization report.
-6. Generate dry-run AWS action plans by default for eligible instances.
+1. Generate or refresh mock billing data in `data/mock_billing.json` with `generate_mock.py`.
+2. Optionally export real read-only AWS Cost Explorer data to a separate JSON file for manual experiments.
+3. Load billing data from `data/mock_billing.json`.
+4. Analyze which EC2 instances are underutilized and which resources should not be changed.
+5. Retrieve relevant pricing rules from the local knowledge base.
+6. Generate a fleet-level cost optimization report.
+7. Generate dry-run AWS action plans by default for eligible instances.
 
 In dry-run mode, no AWS change will be made.
 
@@ -225,7 +248,7 @@ This project demonstrates skills that are directly relevant to AI infrastructure
 Planned extensions:
 
 - Generate monthly enterprise cost optimization reports
-- Add AWS Cost Explorer integration
+- Add richer AWS Cost Explorer integration with utilization enrichment
 - Support additional AWS resources such as RDS, EBS, and S3
 - Generate Terraform plans instead of directly calling AWS APIs
 - Add Slack or Feishu approval workflow

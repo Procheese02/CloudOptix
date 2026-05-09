@@ -18,7 +18,7 @@ CloudOptix 可以识别这类浪费模式，并生成可解释的实例规格优
 
 CloudOptix 使用多 Agent 工作流完成以下任务：
 
-1. 加载多台 EC2 实例的模拟 AWS 账单和资源利用率数据。
+1. 默认加载多台 EC2 实例的模拟 AWS 账单和资源利用率数据，也可以可选地读取 AWS Cost Explorer 的只读真实成本数据，并导出成相同 JSON 结构。
 2. 检测低利用率 EC2 实例，并识别不应该调整的资源。
 3. 从本地 RAG 知识库中检索价格规则和降级策略。
 4. 生成 Markdown 格式的 fleet-level 成本优化报告，包含 top savings opportunities、风险等级和推荐执行顺序。
@@ -55,6 +55,7 @@ CloudOptix
 已实现功能：
 
 - 模拟 AWS fleet 账单数据摄入
+- 可选的只读 AWS Cost Explorer 成本导出，输出为相同账单 JSON 结构
 - 可复现的动态 EC2 mock fleet 生成器，支持 50+ 台实例
 - 多台 EC2 实例的低利用率检测
 - 识别不应该调整的受保护资源
@@ -86,7 +87,9 @@ MVP 暂不包含：
 CloudOptix 特意加入了基础设施安全控制：
 
 - 不在源代码中硬编码云凭证。
-- AWS 凭证通过 `.env` 加载。
+- 默认 demo 使用生成的 mock 数据，免费、稳定、可复现。
+- 只有使用可选 AWS 集成时，才会从 `.env` 加载 AWS 凭证。
+- Cost Explorer 导入脚本只读取账单数据，并只写入本地 JSON 文件。
 - 修改 EC2 实例前必须进行人工确认。
 - 校验 AWS 区域配置，并将 `us-east-2c` 这样的可用区自动修正为 `us-east-2` 这样的区域。
 - 优雅处理 AWS 权限错误和免费计划限制。
@@ -110,6 +113,7 @@ CloudOptix 特意加入了基础设施安全控制：
 ├── agent.py                  # LangGraph 优化工作流
 ├── tool.py                   # 需要人工确认的 AWS 执行工具
 ├── generate_mock.py          # 可复现的动态 EC2 mock fleet 生成器
+├── fetch_cost_explorer.py    # 可选的只读 AWS Cost Explorer 导出脚本
 ├── build_rag.py              # 本地 RAG 索引构建脚本
 ├── test_llm.py               # LLM 连接测试
 ├── requirements.txt          # Python 依赖
@@ -157,11 +161,29 @@ python3 build_rag.py
 
 ### 5. 生成模拟 EC2 fleet 数据
 
+默认工作流使用 `generate_mock.py`。这条路径免费、稳定、可复现，因此推荐作为 demo 默认模式。
+
 ```bash
 python3 generate_mock.py --fleet-size 60 --seed 42 --output data/mock_billing.json
 ```
 
 生成器会创建一个可复现的 50+ 台 EC2 fleet，包含健康实例、低利用率实例、受保护生产实例、最低规格实例和临时 autoscaling 实例。生成的 JSON 默认只保留在本地，因为 `data/*.json` 已被忽略；需要刷新 demo 数据时重新运行该命令即可。
+
+### 可选：导出只读 AWS Cost Explorer 数据
+
+如果你想查看真实 AWS 账单成本数据，同时不替换默认 mock demo，可以运行可选的 Cost Explorer 导出脚本：
+
+```bash
+python3 fetch_cost_explorer.py --start 2026-04-01 --end 2026-05-01 --output data/cost_explorer_billing.json
+```
+
+该脚本只读取 AWS Cost Explorer，并写出一个与 `data/mock_billing.json` 顶层结构一致的本地 JSON 文件。它需要带有 Cost Explorer 只读权限的 AWS 凭证，例如 `ce:GetCostAndUsage`。Cost Explorer 不包含 CPU、内存、owner 或 workload 数据，因此导出的记录默认标记为 `protected`。这让导出的文件适合展示真实账单导入和成本分析，但不适合直接生成自动降级执行建议。
+
+如果想让 agent 读取导出的 Cost Explorer 文件，同时不替换默认 mock demo 输入，可以显式传入账单文件：
+
+```bash
+python3 tool.py --dry-run --billing-file data/cost_explorer_billing.json
+```
 
 ### 6. 运行优化工作流
 
@@ -179,12 +201,13 @@ python3 tool.py --execute
 
 工作流会执行以下步骤：
 
-1. 生成或刷新 `data/mock_billing.json` 中的模拟账单数据。
-2. 从 `data/mock_billing.json` 加载账单数据。
-3. 判断哪些 EC2 实例低利用率，以及哪些资源不应该调整。
-4. 从本地知识库中检索相关价格规则。
-5. 生成 fleet-level 成本优化报告。
-6. 默认针对符合条件的实例生成 dry-run AWS 执行计划。
+1. 使用 `generate_mock.py` 生成或刷新 `data/mock_billing.json` 中的模拟账单数据。
+2. 可选地把真实只读 AWS Cost Explorer 数据导出到单独 JSON 文件，用于手动实验。
+3. 从 `data/mock_billing.json` 加载账单数据。
+4. 判断哪些 EC2 实例低利用率，以及哪些资源不应该调整。
+5. 从本地知识库中检索相关价格规则。
+6. 生成 fleet-level 成本优化报告。
+7. 默认针对符合条件的实例生成 dry-run AWS 执行计划。
 
 在 dry-run 模式下，不会执行任何 AWS 修改。
 
@@ -225,7 +248,7 @@ Human approval required before execution.
 计划扩展：
 
 - 生成企业级月度云成本优化报告
-- 接入 AWS Cost Explorer
+- 扩展 AWS Cost Explorer 集成，并补充利用率数据 enrich
 - 支持 RDS、EBS、S3 等更多 AWS 资源
 - 生成 Terraform Plan，而不是直接调用 AWS API
 - 接入 Slack 或飞书审批工作流

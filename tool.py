@@ -40,6 +40,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Ask for human approval, then execute the EC2 resize through AWS boto3.",
     )
+    parser.add_argument(
+        "--billing-file",
+        default=str(BILLING_PATH),
+        help="Path to the billing JSON file to analyze. Defaults to data/mock_billing.json.",
+    )
     return parser.parse_args()
 
 
@@ -149,8 +154,8 @@ def execute_aws_downgrade(instance_id: str, target_type: str) -> str:
         return error_msg
 
 
-def load_billing_data() -> dict:
-    with BILLING_PATH.open("r", encoding="utf-8") as file:
+def load_billing_data(billing_path: Path) -> dict:
+    with billing_path.open("r", encoding="utf-8") as file:
         return json.load(file)
 
 
@@ -229,7 +234,13 @@ def main() -> None:
     else:
         print("⚠️ 当前运行模式：execute。人工确认后会尝试修改真实 AWS 资源。")
 
-    billing_data = load_billing_data()
+    billing_path = Path(args.billing_file)
+    if not billing_path.is_absolute():
+        billing_path = PROJECT_ROOT / billing_path
+
+    print(f"📄 当前账单输入文件：{billing_path}")
+
+    billing_data = load_billing_data(billing_path)
     initial_state = {
         "billing_data": billing_data,
         "needs_optimization": False,
