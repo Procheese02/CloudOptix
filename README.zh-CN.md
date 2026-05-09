@@ -59,13 +59,14 @@ CloudOptix
 已实现能力：
 
 - 模拟 AWS fleet 账单数据摄入
+- 账单特征分析：CPU 分布、按实例类型聚合利用率、异常检测、成本占比和数据质量检查
 - 可选的只读 AWS Cost Explorer 成本导出，输出为相同账单 JSON 结构
 - 可复现的动态 EC2 mock fleet 生成器，支持 50+ 台实例
 - 多台 EC2 实例的低利用率检测
 - 识别不应该调整的受保护资源
 - Fleet-level 月度成本和节省金额汇总
 - Top savings opportunities 和推荐执行顺序
-- 本地价格知识库
+- 结构化本地价格知识库，并在 RAG 入库前添加标签
 - 基于 Qdrant 的 RAG 检索
 - LangGraph Agent 工作流
 - Markdown 优化报告生成
@@ -118,12 +119,14 @@ CloudOptix 特意加入了基础设施安全控制：
 ├── tool.py                   # 需要人工确认的 AWS 执行工具
 ├── generate_mock.py          # 可复现的动态 EC2 mock fleet 生成器
 ├── fetch_cost_explorer.py    # 可选的只读 AWS Cost Explorer 导出脚本
+├── analyze_billing.py        # 账单特征分析和数据质量检查
 ├── build_rag.py              # 本地 RAG 索引构建脚本
 ├── test_llm.py               # LLM 连接测试
 ├── requirements.txt          # Python 依赖
 ├── data/
 │   ├── mock_billing.json     # 生成的 EC2 账单和利用率模拟数据
-│   └── aws_pricing.md        # 本地 EC2 价格和降级策略文档
+│   ├── aws_pricing.json      # 结构化 EC2 价格、降级规则和约束条件
+│   └── aws_pricing.md        # 人类可读的 EC2 价格和降级策略文档
 └── qdrant_data/              # 本地 Qdrant 向量数据库
 ```
 
@@ -159,6 +162,8 @@ AWS_DEFAULT_REGION="us-east-2"
 
 ### 4. 构建本地 RAG 索引
 
+`build_rag.py` 会从 `data/aws_pricing.json` 加载结构化价格和降级规则，把它们转换成带有 `category=compute`、`scope=ec2`、`action=downsizing` 等标签的 chunk，然后写入 Qdrant。Markdown 价格文档会继续作为人类可读文档和 fallback context 保留。
+
 ```bash
 python3 build_rag.py
 ```
@@ -189,7 +194,17 @@ python3 fetch_cost_explorer.py --start 2026-04-01 --end 2026-05-01 --output data
 python3 tool.py --dry-run --billing-file data/cost_explorer_billing.json
 ```
 
-### 6. 运行优化工作流
+### 6. 在优化前分析账单特征
+
+运行特征分析脚本，先检查 utilization 分布、按实例类型聚合的平均利用率、成本占比、低负载高成本异常和数据质量，再生成执行计划：
+
+```bash
+python3 analyze_billing.py --billing-file data/mock_billing.json --output data/billing_analysis.json
+```
+
+这个输出可以帮助优先处理真正有意义的节省机会，并标记账单文件是否有足够的 utilization 覆盖率用于 rightsizing。Cost Explorer 导出文件也可以用同样方式分析，但在接入 CloudWatch 或 Compute Optimizer utilization 数据前，它仍然是受保护的 cost-only 记录。
+
+### 7. 运行优化工作流
 
 ```bash
 python3 tool.py --dry-run

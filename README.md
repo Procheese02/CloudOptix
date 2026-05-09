@@ -59,13 +59,14 @@ The current version focuses on AWS EC2 rightsizing and is split into two safe da
 Implemented capabilities:
 
 - Mock AWS fleet billing data ingestion
+- Billing feature analysis for CPU distribution, instance-type utilization, anomaly detection, cost share, and data quality
 - Optional read-only AWS Cost Explorer cost export into the same billing JSON structure
 - Dynamic mock EC2 fleet generator with 50+ reproducible instances
 - Low-utilization instance detection across multiple EC2 instances
 - Protected-resource detection for instances that should not be changed
 - Fleet-level monthly cost and savings summary
 - Top savings opportunities with recommended execution order
-- Local pricing knowledge base
+- Local structured pricing knowledge base with tagged RAG chunks
 - Qdrant-backed RAG retrieval
 - LangGraph agent workflow
 - Markdown optimization report generation
@@ -118,12 +119,14 @@ CloudOptix is intentionally designed with infrastructure safety controls:
 ├── tool.py                   # Human-approved AWS execution tool
 ├── generate_mock.py          # Reproducible dynamic EC2 mock fleet generator
 ├── fetch_cost_explorer.py    # Optional read-only AWS Cost Explorer exporter
+├── analyze_billing.py        # Billing feature analysis and data quality checks
 ├── build_rag.py              # Local RAG index builder
 ├── test_llm.py               # LLM connectivity test
 ├── requirements.txt          # Python dependencies
 ├── data/
 │   ├── mock_billing.json     # Generated mock EC2 billing and utilization data
-│   └── aws_pricing.md        # Local EC2 pricing and downgrade policy document
+│   ├── aws_pricing.json      # Structured EC2 pricing, downgrade rules, and constraints
+│   └── aws_pricing.md        # Human-readable EC2 pricing and downgrade policy document
 └── qdrant_data/              # Local Qdrant vector database
 ```
 
@@ -159,6 +162,8 @@ Do not commit `.env` to GitHub.
 
 ### 4. Build the local RAG index
 
+`build_rag.py` loads structured pricing and downgrade rules from `data/aws_pricing.json`, converts them into tagged chunks such as `category=compute`, `scope=ec2`, and `action=downsizing`, and then stores them in Qdrant. The Markdown pricing document remains as human-readable documentation and fallback context.
+
 ```bash
 python3 build_rag.py
 ```
@@ -189,7 +194,17 @@ To try the agent against the exported Cost Explorer file without replacing the m
 python3 tool.py --dry-run --billing-file data/cost_explorer_billing.json
 ```
 
-### 6. Run the optimization workflow
+### 6. Analyze billing features before optimization
+
+Run the feature analysis script to inspect utilization distribution, average utilization by instance type, cost share, low-load high-cost anomalies, and data quality before generating execution plans:
+
+```bash
+python3 analyze_billing.py --billing-file data/mock_billing.json --output data/billing_analysis.json
+```
+
+The output helps prioritize meaningful savings opportunities and flags whether the billing file has enough utilization coverage for rightsizing. Cost Explorer exports can also be analyzed this way, but they remain protected cost-only records until CloudWatch or Compute Optimizer utilization data is joined.
+
+### 7. Run the optimization workflow
 
 ```bash
 python3 tool.py --dry-run

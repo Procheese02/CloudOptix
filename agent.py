@@ -27,6 +27,7 @@ ENV_PATH = PROJECT_ROOT / ".env"
 QDRANT_PATH = PROJECT_ROOT / "qdrant_data"
 BILLING_PATH = PROJECT_ROOT / "data" / "mock_billing.json"
 PRICING_DOC_PATH = PROJECT_ROOT / "data" / "aws_pricing.md"
+PRICING_JSON_PATH = PROJECT_ROOT / "data" / "aws_pricing.json"
 COLLECTION_NAME = "aws_pricing"
 EMBED_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
 LLM_MODEL_NAME = "gpt-5.4"
@@ -97,10 +98,12 @@ def build_llm() -> ChatOpenAI:
     )
 
 
-def read_pricing_doc() -> str:
-    if not PRICING_DOC_PATH.exists():
-        fatal(f"找不到本地价格文档：{PRICING_DOC_PATH}")
-    return PRICING_DOC_PATH.read_text(encoding="utf-8").strip()
+def read_pricing_context() -> str:
+    if PRICING_JSON_PATH.exists():
+        return PRICING_JSON_PATH.read_text(encoding="utf-8").strip()
+    if PRICING_DOC_PATH.exists():
+        return PRICING_DOC_PATH.read_text(encoding="utf-8").strip()
+    fatal(f"找不到本地价格知识库：{PRICING_JSON_PATH} 或 {PRICING_DOC_PATH}")
 
 
 def configure_embedding_model() -> None:
@@ -138,7 +141,7 @@ print("⚙️ 正在启动 AI 团队及挂载本地数据库...")
 configure_embedding_model()
 llm = build_llm()
 retriever = build_retriever()
-pricing_doc = read_pricing_doc()
+pricing_context = read_pricing_context()
 
 
 def _parse_percent(value: Any, field_name: str) -> float:
@@ -264,13 +267,13 @@ def researcher_node(state: AgentState) -> AgentState:
     query = "、".join(instance_types) + " 降级标准是什么？降级两档后的型号和价格各是多少？"
 
     if retriever is None:
-        context = pricing_doc
+        context = pricing_context
     else:
         try:
             nodes = retriever.retrieve(query)
         except Exception as exc:
             print(f"⚠️ 查询向量数据库失败，将改用 Markdown 价格文档。原因：{exc}")
-            context = pricing_doc
+            context = pricing_context
         else:
             context = "\n\n".join(node.node.get_content() for node in nodes).strip()
 
