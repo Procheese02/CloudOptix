@@ -60,6 +60,8 @@ Implemented features:
 - Qdrant-backed RAG retrieval
 - LangGraph agent workflow
 - Markdown optimization report generation
+- Dry-run mode for safe action planning
+- Explicit execute mode for approved AWS changes
 - Human-in-the-loop approval before execution
 - AWS region validation
 - AWS free-tier restriction handling
@@ -151,7 +153,15 @@ python3 build_rag.py
 ### 5. Run the optimization workflow
 
 ```bash
-python3 tool.py
+python3 tool.py --dry-run
+```
+
+Dry-run mode is the default and only generates the optimization report and AWS action plan. It does not modify any AWS resources.
+
+To explicitly run with the default dry-run behavior, use `--dry-run`. To attempt a real EC2 resize after human confirmation, use:
+
+```bash
+python3 tool.py --execute
 ```
 
 The workflow will:
@@ -160,11 +170,11 @@ The workflow will:
 2. Analyze whether the EC2 instance is underutilized.
 3. Retrieve relevant pricing rules from the local knowledge base.
 4. Generate a cost optimization report.
-5. Ask for human approval before attempting any real AWS modification.
+5. Generate a dry-run AWS action plan by default.
 
-If you type `N`, no AWS change will be made.
+In dry-run mode, no AWS change will be made.
 
-If you type `Y`, the tool will attempt to stop the EC2 instance, modify its instance type, and restart it. This may be blocked by AWS account permissions or free-tier restrictions.
+In execute mode, the tool will ask for human approval before attempting to stop the EC2 instance, modify its instance type, and restart it. This may be blocked by AWS account permissions or free-tier restrictions.
 
 ## Example Output
 
@@ -195,7 +205,6 @@ This project demonstrates skills that are directly relevant to AI infrastructure
 
 Planned extensions:
 
-- Add `--dry-run` and `--execute` CLI modes
 - Analyze a fleet of 50+ mock EC2 instances
 - Generate monthly enterprise cost optimization reports
 - Add AWS Cost Explorer integration

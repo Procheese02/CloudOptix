@@ -60,6 +60,8 @@ CloudOptix
 - 基于 Qdrant 的 RAG 检索
 - LangGraph Agent 工作流
 - Markdown 优化报告生成
+- Dry-run 模式，用于安全生成执行计划
+- 显式 execute 模式，用于人工批准后的 AWS 修改
 - 执行前人工确认
 - AWS 区域校验
 - AWS 免费计划限制处理
@@ -151,7 +153,15 @@ python3 build_rag.py
 ### 5. 运行优化工作流
 
 ```bash
-python3 tool.py
+python3 tool.py --dry-run
+```
+
+Dry-run 是默认模式，只会生成优化报告和 AWS 执行计划，不会修改任何 AWS 资源。
+
+如果想显式使用默认 dry-run 行为，可以传入 `--dry-run`。如果想在人工确认后尝试真实 EC2 规格调整，可以运行：
+
+```bash
+python3 tool.py --execute
 ```
 
 工作流会执行以下步骤：
@@ -160,11 +170,11 @@ python3 tool.py
 2. 判断 EC2 实例是否存在低利用率问题。
 3. 从本地知识库中检索相关价格规则。
 4. 生成成本优化报告。
-5. 在尝试真实 AWS 修改前请求人工确认。
+5. 默认生成 dry-run AWS 执行计划。
 
-如果输入 `N`，不会执行任何 AWS 修改。
+在 dry-run 模式下，不会执行任何 AWS 修改。
 
-如果输入 `Y`，工具会尝试停止 EC2 实例、修改实例规格并重新启动。该操作可能会被 AWS 账号权限或免费计划限制阻止。
+在 execute 模式下，工具会先请求人工确认，然后尝试停止 EC2 实例、修改实例规格并重新启动。该操作可能会被 AWS 账号权限或免费计划限制阻止。
 
 ## 示例输出
 
@@ -195,7 +205,6 @@ Human approval required before execution.
 
 计划扩展：
 
-- 增加 `--dry-run` 和 `--execute` CLI 模式
 - 分析 50+ 台模拟 EC2 实例组成的资源池
 - 生成企业级月度云成本优化报告
 - 接入 AWS Cost Explorer
