@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-CloudOptix 是一个基于 AI 的 FinOps 云成本优化助手。它能够分析 AWS EC2 的账单和资源利用率数据，通过 RAG 检索云资源价格政策，并在任何基础设施变更前，先生成需要人工确认的成本优化建议。
+CloudOptix 是一个基于 AI 的 FinOps 云成本优化助手。它能够分析 AWS EC2 fleet 的账单和资源利用率数据，通过 RAG 检索云资源价格政策，并在任何基础设施变更前，先生成需要人工确认的成本优化建议。
 
 这个项目被设计成一个适合求职展示的 AI 基础设施应用：它围绕“降低云资源浪费”这一真实业务问题，结合了云自动化、RAG、LangGraph 多 Agent 编排和安全执行控制。
 
@@ -18,10 +18,10 @@ CloudOptix 可以识别这类浪费模式，并生成可解释的实例规格优
 
 CloudOptix 使用多 Agent 工作流完成以下任务：
 
-1. 加载模拟的 AWS 账单和资源利用率数据。
-2. 检测低利用率 EC2 实例。
+1. 加载多台 EC2 实例的模拟 AWS 账单和资源利用率数据。
+2. 检测低利用率 EC2 实例，并识别不应该调整的资源。
 3. 从本地 RAG 知识库中检索价格规则和降级策略。
-4. 生成 Markdown 格式的成本优化报告。
+4. 生成 Markdown 格式的 fleet-level 成本优化报告，包含 top savings opportunities、风险等级和推荐执行顺序。
 5. 在人工确认后，可选地通过 `boto3` 执行 AWS EC2 实例规格调整。
 
 默认情况下，项目强调安全的 FinOps 自动化，而不是让 AI 不受控制地直接修改云资源。
@@ -54,8 +54,11 @@ CloudOptix
 
 已实现功能：
 
-- 模拟 AWS 账单数据摄入
-- 低利用率实例检测
+- 模拟 AWS fleet 账单数据摄入
+- 多台 EC2 实例的低利用率检测
+- 识别不应该调整的受保护资源
+- Fleet-level 月度成本和节省金额汇总
+- Top savings opportunities 和推荐执行顺序
 - 本地价格知识库
 - 基于 Qdrant 的 RAG 检索
 - LangGraph Agent 工作流
@@ -167,10 +170,10 @@ python3 tool.py --execute
 工作流会执行以下步骤：
 
 1. 从 `data/mock_billing.json` 加载账单数据。
-2. 判断 EC2 实例是否存在低利用率问题。
+2. 判断哪些 EC2 实例低利用率，以及哪些资源不应该调整。
 3. 从本地知识库中检索相关价格规则。
-4. 生成成本优化报告。
-5. 默认生成 dry-run AWS 执行计划。
+4. 生成 fleet-level 成本优化报告。
+5. 默认针对符合条件的实例生成 dry-run AWS 执行计划。
 
 在 dry-run 模式下，不会执行任何 AWS 修改。
 
@@ -179,13 +182,18 @@ python3 tool.py --execute
 ## 示例输出
 
 ```text
-Inspector: CPU utilization is 6.68%, optimization needed: True
+Inspector: Found 3 optimizable resources and 2 resources that should not be changed
 Researcher: Retrieved EC2 pricing policy from knowledge base
-Advisor: Generated cost optimization report
+Advisor: Generated fleet-level cost optimization report
 
-Recommendation:
+Fleet summary:
+Total monthly cost: $467.57
+Optimizable resources: 3
+Estimated monthly savings: $275.94
+Risk level: Low
+
+Top opportunity:
 Downgrade i-03ea43d903f366fa5 from t3.2xlarge to t3.large
-Estimated monthly savings: $185.28
 
 Human approval required before execution.
 ```
@@ -205,7 +213,7 @@ Human approval required before execution.
 
 计划扩展：
 
-- 分析 50+ 台模拟 EC2 实例组成的资源池
+- 将模拟 EC2 fleet 扩展到 50+ 台实例
 - 生成企业级月度云成本优化报告
 - 接入 AWS Cost Explorer
 - 支持 RDS、EBS、S3 等更多 AWS 资源
@@ -216,4 +224,4 @@ Human approval required before execution.
 
 ## 简历描述
 
-构建 CloudOptix，一个 AI 驱动的 FinOps 云成本优化 Agent。该项目能够分析 AWS EC2 账单和资源利用率数据，通过基于 Qdrant 的 RAG 管道检索价格策略，并使用 LangGraph 多 Agent 编排生成带人工审批机制的云成本优化方案。
+构建 CloudOptix，一个 AI 驱动的 FinOps 云成本优化 Agent。该项目能够分析 AWS EC2 fleet 账单和资源利用率数据，通过基于 Qdrant 的 RAG 管道检索价格策略，并使用 LangGraph 多 Agent 编排生成带人工审批机制的 fleet-level 云成本优化方案。

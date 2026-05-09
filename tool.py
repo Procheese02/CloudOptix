@@ -3,13 +3,15 @@ import json
 import os
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import boto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 from langchain_core.tools import tool
 
-from agent import AgentState, app, close_qdrant_clients
+if TYPE_CHECKING:
+    from agent import AgentState
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 BILLING_PATH = PROJECT_ROOT / "data" / "mock_billing.json"
@@ -213,6 +215,8 @@ def build_action_result(billing_data: dict, execute: bool) -> str:
 
 
 def main() -> None:
+    from agent import app, close_qdrant_clients
+
     args = parse_args()
     execute = args.execute
 
@@ -226,7 +230,7 @@ def main() -> None:
         print("⚠️ 当前运行模式：execute。人工确认后会尝试修改真实 AWS 资源。")
 
     billing_data = load_billing_data()
-    initial_state: AgentState = {
+    initial_state = {
         "billing_data": billing_data,
         "needs_optimization": False,
         "rag_context": "",

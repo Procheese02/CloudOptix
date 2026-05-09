@@ -2,7 +2,7 @@
 
 [简体中文](README.zh-CN.md)
 
-CloudOptix is an AI-powered FinOps assistant that analyzes AWS EC2 billing and utilization data, retrieves cloud pricing policies through RAG, and generates cost optimization recommendations with human approval before any infrastructure change.
+CloudOptix is an AI-powered FinOps assistant that analyzes AWS EC2 billing and utilization data across a fleet, retrieves cloud pricing policies through RAG, and generates cost optimization recommendations with human approval before any infrastructure change.
 
 The project is designed as a practical, job-portfolio-ready AI infrastructure application: it combines cloud automation, RAG, LangGraph agent orchestration, and safe execution controls around a real business problem — reducing cloud waste.
 
@@ -18,11 +18,11 @@ CloudOptix helps identify these waste patterns and produces explainable rightsiz
 
 CloudOptix uses a multi-agent workflow to:
 
-1. Load mock AWS billing and utilization data.
-2. Detect underutilized EC2 instances.
+1. Load mock AWS billing and utilization data for multiple EC2 instances.
+2. Detect underutilized EC2 instances and resources that should not be changed.
 3. Retrieve pricing rules and downgrade policies from a local RAG knowledge base.
-4. Generate a Markdown cost optimization report.
-5. Optionally prepare and execute an AWS EC2 resize action through `boto3` after human confirmation.
+4. Generate a Markdown fleet-level cost optimization report with top savings opportunities, risk levels, and execution order.
+5. Optionally prepare and execute AWS EC2 resize actions through `boto3` after human confirmation.
 
 By default, the project is structured around safe FinOps automation rather than uncontrolled AI execution.
 
@@ -54,8 +54,11 @@ The current version focuses on AWS EC2 rightsizing.
 
 Implemented features:
 
-- Mock AWS billing data ingestion
-- Low-utilization instance detection
+- Mock AWS fleet billing data ingestion
+- Low-utilization instance detection across multiple EC2 instances
+- Protected-resource detection for instances that should not be changed
+- Fleet-level monthly cost and savings summary
+- Top savings opportunities with recommended execution order
 - Local pricing knowledge base
 - Qdrant-backed RAG retrieval
 - LangGraph agent workflow
@@ -167,10 +170,10 @@ python3 tool.py --execute
 The workflow will:
 
 1. Load billing data from `data/mock_billing.json`.
-2. Analyze whether the EC2 instance is underutilized.
+2. Analyze which EC2 instances are underutilized and which resources should not be changed.
 3. Retrieve relevant pricing rules from the local knowledge base.
-4. Generate a cost optimization report.
-5. Generate a dry-run AWS action plan by default.
+4. Generate a fleet-level cost optimization report.
+5. Generate dry-run AWS action plans by default for eligible instances.
 
 In dry-run mode, no AWS change will be made.
 
@@ -179,13 +182,18 @@ In execute mode, the tool will ask for human approval before attempting to stop 
 ## Example Output
 
 ```text
-Inspector: CPU utilization is 6.68%, optimization needed: True
+Inspector: Found 3 optimizable resources and 2 resources that should not be changed
 Researcher: Retrieved EC2 pricing policy from knowledge base
-Advisor: Generated cost optimization report
+Advisor: Generated fleet-level cost optimization report
 
-Recommendation:
+Fleet summary:
+Total monthly cost: $467.57
+Optimizable resources: 3
+Estimated monthly savings: $275.94
+Risk level: Low
+
+Top opportunity:
 Downgrade i-03ea43d903f366fa5 from t3.2xlarge to t3.large
-Estimated monthly savings: $185.28
 
 Human approval required before execution.
 ```
@@ -205,7 +213,7 @@ This project demonstrates skills that are directly relevant to AI infrastructure
 
 Planned extensions:
 
-- Analyze a fleet of 50+ mock EC2 instances
+- Expand the mock fleet to 50+ EC2 instances
 - Generate monthly enterprise cost optimization reports
 - Add AWS Cost Explorer integration
 - Support additional AWS resources such as RDS, EBS, and S3
@@ -216,4 +224,4 @@ Planned extensions:
 
 ## Resume Summary
 
-Built CloudOptix, an AI-powered FinOps agent that analyzes AWS EC2 billing and utilization data, retrieves pricing policies through a Qdrant-based RAG pipeline, and uses LangGraph multi-agent orchestration to generate cost optimization plans with human approval before execution.
+Built CloudOptix, an AI-powered FinOps agent that analyzes AWS EC2 fleet billing and utilization data, retrieves pricing policies through a Qdrant-based RAG pipeline, and uses LangGraph multi-agent orchestration to generate fleet-level cost optimization plans with human approval before execution.
