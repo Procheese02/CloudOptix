@@ -48,11 +48,15 @@ CloudOptix
     └── 基于 boto3 的可选 EC2 规格调整，并包含 AWS 错误处理
 ```
 
-## 当前 MVP 范围
+## Product Roadmap（产品路线图）
 
-当前版本聚焦于 AWS EC2 实例规格优化。
+当前版本聚焦于 AWS EC2 实例规格优化，并拆成两条安全的数据路径：
 
-已实现功能：
+- 默认 mock 工作流：完整、可复现的 demo，可以生成优化建议。
+- 可选 Cost Explorer 工作流：导入真实只读账单数据，用于成本分析和账单导入展示。
+- 下一阶段：接入 CloudWatch / Compute Optimizer 补充 utilization 数据，再生成真实 rightsizing 建议。
+
+已实现能力：
 
 - 模拟 AWS fleet 账单数据摄入
 - 可选的只读 AWS Cost Explorer 成本导出，输出为相同账单 JSON 结构

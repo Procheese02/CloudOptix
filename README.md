@@ -48,11 +48,15 @@ CloudOptix
     └── Optional boto3-based EC2 resize with AWS error handling
 ```
 
-## Current MVP Scope
+## Product Roadmap
 
-The current version focuses on AWS EC2 rightsizing.
+The current version focuses on AWS EC2 rightsizing and is split into two safe data paths:
 
-Implemented features:
+- Default mock workflow: a complete, reproducible demo that can generate optimization recommendations.
+- Optional Cost Explorer workflow: real read-only billing import for cost analysis and bill-import demos.
+- Next stage: connect CloudWatch / Compute Optimizer utilization data before generating real rightsizing recommendations.
+
+Implemented capabilities:
 
 - Mock AWS fleet billing data ingestion
 - Optional read-only AWS Cost Explorer cost export into the same billing JSON structure
