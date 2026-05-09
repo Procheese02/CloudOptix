@@ -119,6 +119,7 @@ CloudOptix 特意加入了基础设施安全控制：
 ├── tool.py                   # 需要人工确认的 AWS 执行工具
 ├── generate_mock.py          # 可复现的动态 EC2 mock fleet 生成器
 ├── fetch_cost_explorer.py    # 可选的只读 AWS Cost Explorer 导出脚本
+├── fetch_aws_pricing.py      # 可选 AWS Pricing API 导出脚本，用于真实 EC2 On-Demand 价格
 ├── analyze_billing.py        # 账单特征分析和数据质量检查
 ├── build_rag.py              # 本地 RAG 索引构建脚本
 ├── test_llm.py               # LLM 连接测试
@@ -162,7 +163,15 @@ AWS_DEFAULT_REGION="us-east-2"
 
 ### 4. 构建本地 RAG 索引
 
-`build_rag.py` 会从 `data/aws_pricing.json` 加载结构化价格和降级规则，把它们转换成带有 `category=compute`、`scope=ec2`、`action=downsizing` 等标签的 chunk，然后写入 Qdrant。Markdown 价格文档会继续作为人类可读文档和 fallback context 保留。
+`build_rag.py` 会从 `data/aws_pricing.json` 加载结构化价格和降级规则，把它们转换成带有 `category=compute`、`scope=ec2`、`action=downsizing` 等标签的 chunk，然后写入 Qdrant。仓库内置的 JSON 是本地 demo baseline；Markdown 价格文档会继续作为人类可读文档和 fallback context 保留。
+
+如果想用真实 AWS Linux shared-tenancy On-Demand EC2 价格刷新这个 baseline，可以先运行可选的 AWS Pricing API 导出脚本：
+
+```bash
+python3 fetch_aws_pricing.py --region us-east-1 --output data/aws_pricing.json
+```
+
+这一步只更新价格知识库。真实 rightsizing 仍然需要 utilization 数据；当前可以来自 mock workflow，后续可以来自 CloudWatch / Compute Optimizer enrich。
 
 ```bash
 python3 build_rag.py
