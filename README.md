@@ -55,6 +55,7 @@ The current version focuses on AWS EC2 rightsizing.
 Implemented features:
 
 - Mock AWS fleet billing data ingestion
+- Dynamic mock EC2 fleet generator with 50+ reproducible instances
 - Low-utilization instance detection across multiple EC2 instances
 - Protected-resource detection for instances that should not be changed
 - Fleet-level monthly cost and savings summary
@@ -108,11 +109,12 @@ CloudOptix is intentionally designed with infrastructure safety controls:
 .
 ├── agent.py                  # LangGraph optimization workflow
 ├── tool.py                   # Human-approved AWS execution tool
+├── generate_mock.py          # Reproducible dynamic EC2 mock fleet generator
 ├── build_rag.py              # Local RAG index builder
 ├── test_llm.py               # LLM connectivity test
 ├── requirements.txt          # Python dependencies
 ├── data/
-│   ├── mock_billing.json     # Mock EC2 billing and utilization data
+│   ├── mock_billing.json     # Generated mock EC2 billing and utilization data
 │   └── aws_pricing.md        # Local EC2 pricing and downgrade policy document
 └── qdrant_data/              # Local Qdrant vector database
 ```
@@ -153,7 +155,15 @@ Do not commit `.env` to GitHub.
 python3 build_rag.py
 ```
 
-### 5. Run the optimization workflow
+### 5. Generate mock EC2 fleet data
+
+```bash
+python3 generate_mock.py --fleet-size 60 --seed 42 --output data/mock_billing.json
+```
+
+The generator creates a reproducible 50+ instance EC2 fleet with healthy, underutilized, protected, minimum-size, and temporary autoscaling instances. The generated JSON stays local by default because `data/*.json` is ignored; rerun the command whenever you want to refresh the demo data.
+
+### 6. Run the optimization workflow
 
 ```bash
 python3 tool.py --dry-run
@@ -169,11 +179,12 @@ python3 tool.py --execute
 
 The workflow will:
 
-1. Load billing data from `data/mock_billing.json`.
-2. Analyze which EC2 instances are underutilized and which resources should not be changed.
-3. Retrieve relevant pricing rules from the local knowledge base.
-4. Generate a fleet-level cost optimization report.
-5. Generate dry-run AWS action plans by default for eligible instances.
+1. Generate or refresh mock billing data in `data/mock_billing.json`.
+2. Load billing data from `data/mock_billing.json`.
+3. Analyze which EC2 instances are underutilized and which resources should not be changed.
+4. Retrieve relevant pricing rules from the local knowledge base.
+5. Generate a fleet-level cost optimization report.
+6. Generate dry-run AWS action plans by default for eligible instances.
 
 In dry-run mode, no AWS change will be made.
 
@@ -182,18 +193,18 @@ In execute mode, the tool will ask for human approval before attempting to stop 
 ## Example Output
 
 ```text
-Inspector: Found 3 optimizable resources and 2 resources that should not be changed
+Inspector: Found 20+ optimizable resources and 40+ resources that should not be changed
 Researcher: Retrieved EC2 pricing policy from knowledge base
 Advisor: Generated fleet-level cost optimization report
 
 Fleet summary:
-Total monthly cost: $467.57
-Optimizable resources: 3
-Estimated monthly savings: $275.94
-Risk level: Low
+Total monthly cost: generated from the current mock fleet
+Optimizable resources: based on current utilization simulation
+Estimated monthly savings: calculated from rightsizing candidates
+Risk level: Low to Medium
 
 Top opportunity:
-Downgrade i-03ea43d903f366fa5 from t3.2xlarge to t3.large
+Downgrade the largest low-utilization t3 instance to the recommended smaller type
 
 Human approval required before execution.
 ```
@@ -213,7 +224,6 @@ This project demonstrates skills that are directly relevant to AI infrastructure
 
 Planned extensions:
 
-- Expand the mock fleet to 50+ EC2 instances
 - Generate monthly enterprise cost optimization reports
 - Add AWS Cost Explorer integration
 - Support additional AWS resources such as RDS, EBS, and S3

@@ -55,6 +55,7 @@ CloudOptix
 已实现功能：
 
 - 模拟 AWS fleet 账单数据摄入
+- 可复现的动态 EC2 mock fleet 生成器，支持 50+ 台实例
 - 多台 EC2 实例的低利用率检测
 - 识别不应该调整的受保护资源
 - Fleet-level 月度成本和节省金额汇总
@@ -108,11 +109,12 @@ CloudOptix 特意加入了基础设施安全控制：
 .
 ├── agent.py                  # LangGraph 优化工作流
 ├── tool.py                   # 需要人工确认的 AWS 执行工具
+├── generate_mock.py          # 可复现的动态 EC2 mock fleet 生成器
 ├── build_rag.py              # 本地 RAG 索引构建脚本
 ├── test_llm.py               # LLM 连接测试
 ├── requirements.txt          # Python 依赖
 ├── data/
-│   ├── mock_billing.json     # 模拟 EC2 账单和利用率数据
+│   ├── mock_billing.json     # 生成的 EC2 账单和利用率模拟数据
 │   └── aws_pricing.md        # 本地 EC2 价格和降级策略文档
 └── qdrant_data/              # 本地 Qdrant 向量数据库
 ```
@@ -153,7 +155,15 @@ AWS_DEFAULT_REGION="us-east-2"
 python3 build_rag.py
 ```
 
-### 5. 运行优化工作流
+### 5. 生成模拟 EC2 fleet 数据
+
+```bash
+python3 generate_mock.py --fleet-size 60 --seed 42 --output data/mock_billing.json
+```
+
+生成器会创建一个可复现的 50+ 台 EC2 fleet，包含健康实例、低利用率实例、受保护生产实例、最低规格实例和临时 autoscaling 实例。生成的 JSON 默认只保留在本地，因为 `data/*.json` 已被忽略；需要刷新 demo 数据时重新运行该命令即可。
+
+### 6. 运行优化工作流
 
 ```bash
 python3 tool.py --dry-run
@@ -169,11 +179,12 @@ python3 tool.py --execute
 
 工作流会执行以下步骤：
 
-1. 从 `data/mock_billing.json` 加载账单数据。
-2. 判断哪些 EC2 实例低利用率，以及哪些资源不应该调整。
-3. 从本地知识库中检索相关价格规则。
-4. 生成 fleet-level 成本优化报告。
-5. 默认针对符合条件的实例生成 dry-run AWS 执行计划。
+1. 生成或刷新 `data/mock_billing.json` 中的模拟账单数据。
+2. 从 `data/mock_billing.json` 加载账单数据。
+3. 判断哪些 EC2 实例低利用率，以及哪些资源不应该调整。
+4. 从本地知识库中检索相关价格规则。
+5. 生成 fleet-level 成本优化报告。
+6. 默认针对符合条件的实例生成 dry-run AWS 执行计划。
 
 在 dry-run 模式下，不会执行任何 AWS 修改。
 
@@ -182,18 +193,18 @@ python3 tool.py --execute
 ## 示例输出
 
 ```text
-Inspector: Found 3 optimizable resources and 2 resources that should not be changed
+Inspector: Found 20+ optimizable resources and 40+ resources that should not be changed
 Researcher: Retrieved EC2 pricing policy from knowledge base
 Advisor: Generated fleet-level cost optimization report
 
 Fleet summary:
-Total monthly cost: $467.57
-Optimizable resources: 3
-Estimated monthly savings: $275.94
-Risk level: Low
+Total monthly cost: generated from the current mock fleet
+Optimizable resources: based on current utilization simulation
+Estimated monthly savings: calculated from rightsizing candidates
+Risk level: Low to Medium
 
 Top opportunity:
-Downgrade i-03ea43d903f366fa5 from t3.2xlarge to t3.large
+Downgrade the largest low-utilization t3 instance to the recommended smaller type
 
 Human approval required before execution.
 ```
@@ -213,7 +224,6 @@ Human approval required before execution.
 
 计划扩展：
 
-- 将模拟 EC2 fleet 扩展到 50+ 台实例
 - 生成企业级月度云成本优化报告
 - 接入 AWS Cost Explorer
 - 支持 RDS、EBS、S3 等更多 AWS 资源
