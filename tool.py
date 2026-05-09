@@ -215,7 +215,7 @@ def build_action_result(billing_data: dict, execute: bool) -> str:
 
 
 def main() -> None:
-    from agent import app, close_qdrant_clients
+    from agent import app
 
     args = parse_args()
     execute = args.execute
@@ -259,6 +259,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    from agent import close_qdrant_clients
+
     try:
         main()
     finally:
