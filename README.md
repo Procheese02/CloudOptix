@@ -120,6 +120,7 @@ CloudOptix is intentionally designed with infrastructure safety controls:
 ├── generate_mock.py          # Reproducible dynamic EC2 mock fleet generator
 ├── fetch_cost_explorer.py    # Optional read-only AWS Cost Explorer exporter
 ├── fetch_aws_pricing.py      # Optional AWS Pricing API exporter for real EC2 On-Demand prices
+├── sync_mock_costs.py        # Sync mock billing costs from structured pricing data
 ├── analyze_billing.py        # Billing feature analysis and data quality checks
 ├── build_rag.py              # Local RAG index builder
 ├── test_llm.py               # LLM connectivity test
@@ -185,7 +186,15 @@ The default workflow uses `generate_mock.py`. This path is free, stable, and rep
 python3 generate_mock.py --fleet-size 60 --seed 42 --output data/mock_billing.json
 ```
 
-The generator creates a reproducible 50+ instance EC2 fleet with healthy, underutilized, protected, minimum-size, and temporary autoscaling instances. The generated JSON stays local by default because `data/*.json` is ignored; rerun the command whenever you want to refresh the demo data.
+The generator creates a reproducible 50+ instance EC2 fleet with healthy, underutilized, protected, minimum-size, and temporary autoscaling instances. The baseline mock billing file is committed as static demo data, so local development, tests, and offline demos can run without AWS credentials.
+
+To keep the static mock data aligned with current AWS On-Demand prices, let the sync script refresh AWS Pricing API data first and then update the mock billing costs:
+
+```bash
+python3 sync_mock_costs.py --refresh-aws-pricing --billing-file data/mock_billing.json --pricing-file data/aws_pricing.json --output data/mock_billing.json
+```
+
+This keeps the demo story consistent: simulated utilization with real AWS On-Demand price estimates. If AWS credentials or network access are unavailable, skip `--refresh-aws-pricing` and the workflow will continue using the committed static pricing baseline.
 
 ### Optional: export read-only AWS Cost Explorer data
 
@@ -225,6 +234,17 @@ To explicitly run with the default dry-run behavior, use `--dry-run`. To attempt
 
 ```bash
 python3 tool.py --execute
+```
+
+The recommended demo chain is:
+
+```bash
+python3 fetch_aws_pricing.py --region us-east-1 --output data/aws_pricing.json
+python3 generate_mock.py --fleet-size 60 --seed 42 --output data/mock_billing.json
+python3 sync_mock_costs.py --billing-file data/mock_billing.json --pricing-file data/aws_pricing.json --output data/mock_billing.json
+python3 build_rag.py
+python3 analyze_billing.py --billing-file data/mock_billing.json
+python3 tool.py --dry-run --billing-file data/mock_billing.json
 ```
 
 The workflow will:
