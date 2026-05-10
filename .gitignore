@@ -15,6 +15,8 @@ __pycache__/
 qdrant_data/
 
 data/*.json
+!data/mock_billing.json
+!data/aws_pricing.json
 data/*.csv
 
 .DS_Store
