@@ -119,6 +119,7 @@ CloudOptix is intentionally designed with infrastructure safety controls:
 ├── tool.py                   # Human-approved AWS execution tool
 ├── generate_mock.py          # Reproducible dynamic EC2 mock fleet generator
 ├── fetch_cost_explorer.py    # Optional read-only AWS Cost Explorer exporter
+├── fetch_cloudwatch_metrics.py # Optional CloudWatch metrics and EC2 tag enricher
 ├── fetch_aws_pricing.py      # Optional AWS Pricing API exporter for real EC2 On-Demand prices
 ├── sync_mock_costs.py        # Sync mock billing costs from structured pricing data
 ├── analyze_billing.py        # Billing feature analysis and data quality checks
@@ -205,6 +206,20 @@ python3 fetch_cost_explorer.py --start 2026-04-01 --end 2026-05-01 --output data
 ```
 
 This script only reads AWS Cost Explorer and writes a local JSON file with the same top-level shape as `data/mock_billing.json`. It requires AWS credentials with Cost Explorer read permissions, such as `ce:GetCostAndUsage`. Cost Explorer does not include CPU, memory, ownership, or workload data, so exported records are marked `protected` by default. This makes the exported file suitable for real cost analysis and bill-import demos, but not for automatic downgrade execution.
+
+To add read-only CloudWatch utilization and EC2 tag metadata, enrich the Cost Explorer export:
+
+```bash
+python3 fetch_cloudwatch_metrics.py --billing-file data/cost_explorer_billing.json --region us-east-1 --output data/cloudwatch_enriched_billing.json
+```
+
+This requires `cloudwatch:GetMetricData`, `cloudwatch:GetMetricStatistics`, `cloudwatch:ListMetrics`, `ec2:DescribeInstances`, `ec2:DescribeTags`, and `ec2:DescribeRegions`. Default EC2 CloudWatch metrics include CPU, network, and disk activity, but not memory. Enriched records remain protected when memory is missing, so they are safe for cost and utilization review without automatic rightsizing execution.
+
+To try the agent against the enriched CloudWatch file without replacing the mock demo input, pass it explicitly:
+
+```bash
+python3 tool.py --dry-run --billing-file data/cloudwatch_enriched_billing.json
+```
 
 To try the agent against the exported Cost Explorer file without replacing the mock demo input, pass it explicitly:
 

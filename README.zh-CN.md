@@ -119,6 +119,7 @@ CloudOptix 特意加入了基础设施安全控制：
 ├── tool.py                   # 需要人工确认的 AWS 执行工具
 ├── generate_mock.py          # 可复现的动态 EC2 mock fleet 生成器
 ├── fetch_cost_explorer.py    # 可选的只读 AWS Cost Explorer 导出脚本
+├── fetch_cloudwatch_metrics.py # 可选的 CloudWatch 指标和 EC2 tag enrich 脚本
 ├── fetch_aws_pricing.py      # 可选 AWS Pricing API 导出脚本，用于真实 EC2 On-Demand 价格
 ├── sync_mock_costs.py        # 用结构化价格数据同步 mock 账单成本
 ├── analyze_billing.py        # 账单特征分析和数据质量检查
@@ -205,6 +206,20 @@ python3 fetch_cost_explorer.py --start 2026-04-01 --end 2026-05-01 --output data
 ```
 
 该脚本只读取 AWS Cost Explorer，并写出一个与 `data/mock_billing.json` 顶层结构一致的本地 JSON 文件。它需要带有 Cost Explorer 只读权限的 AWS 凭证，例如 `ce:GetCostAndUsage`。Cost Explorer 不包含 CPU、内存、owner 或 workload 数据，因此导出的记录默认标记为 `protected`。这让导出的文件适合展示真实账单导入和成本分析，但不适合直接生成自动降级执行建议。
+
+如果要补充只读 CloudWatch utilization 和 EC2 tag metadata，可以 enrich Cost Explorer 导出文件：
+
+```bash
+python3 fetch_cloudwatch_metrics.py --billing-file data/cost_explorer_billing.json --region us-east-1 --output data/cloudwatch_enriched_billing.json
+```
+
+这需要 `cloudwatch:GetMetricData`、`cloudwatch:GetMetricStatistics`、`cloudwatch:ListMetrics`、`ec2:DescribeInstances`、`ec2:DescribeTags` 和 `ec2:DescribeRegions` 权限。默认 EC2 CloudWatch 指标包含 CPU、network 和 disk activity，但不包含内存。缺少内存时 enriched 记录仍会保持 protected，因此适合成本和利用率 review，不会直接进入自动 rightsizing 执行。
+
+如果想让 agent 读取 enriched CloudWatch 文件，同时不替换默认 mock demo 输入，可以显式传入账单文件：
+
+```bash
+python3 tool.py --dry-run --billing-file data/cloudwatch_enriched_billing.json
+```
 
 如果想让 agent 读取导出的 Cost Explorer 文件，同时不替换默认 mock demo 输入，可以显式传入账单文件：
 
