@@ -186,15 +186,15 @@ The default workflow uses `generate_mock.py`. This path is free, stable, and rep
 python3 generate_mock.py --fleet-size 60 --seed 42 --output data/mock_billing.json
 ```
 
-The generator creates a reproducible 50+ instance EC2 fleet with healthy, underutilized, protected, minimum-size, and temporary autoscaling instances. The generated JSON stays local by default because `data/*.json` is ignored; rerun the command whenever you want to refresh the demo data.
+The generator creates a reproducible 50+ instance EC2 fleet with healthy, underutilized, protected, minimum-size, and temporary autoscaling instances. The baseline mock billing file is committed as static demo data, so local development, tests, and offline demos can run without AWS credentials.
 
-If you refreshed `data/aws_pricing.json` from the AWS Pricing API, align the mock billing costs with those current On-Demand prices before analysis:
+To keep the static mock data aligned with current AWS On-Demand prices, let the sync script refresh AWS Pricing API data first and then update the mock billing costs:
 
 ```bash
-python3 sync_mock_costs.py --billing-file data/mock_billing.json --pricing-file data/aws_pricing.json --output data/mock_billing.json
+python3 sync_mock_costs.py --refresh-aws-pricing --billing-file data/mock_billing.json --pricing-file data/aws_pricing.json --output data/mock_billing.json
 ```
 
-This keeps the demo story consistent: simulated utilization with real AWS On-Demand price estimates.
+This keeps the demo story consistent: simulated utilization with real AWS On-Demand price estimates. If AWS credentials or network access are unavailable, skip `--refresh-aws-pricing` and the workflow will continue using the committed static pricing baseline.
 
 ### Optional: export read-only AWS Cost Explorer data
 

@@ -50,6 +50,34 @@ class SyncMockCostsTests(unittest.TestCase):
         self.assertEqual(synced["instances"][0]["monthly_cost"], 70.0)
         self.assertEqual(summary["unchanged_instance_types"], ["m7g.large"])
 
+    def test_instance_types_from_billing_returns_sorted_unique_types(self):
+        billing_data = {
+            "instances": [
+                {"instance_type": "t3.large"},
+                {"instance_type": "t3.micro"},
+                {"instance_type": "t3.large"},
+            ]
+        }
+
+        self.assertEqual(sync_mock_costs.instance_types_from_billing(billing_data), ["t3.large", "t3.micro"])
+
+    def test_load_or_refresh_pricing_data_uses_existing_file_by_default(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pricing_path = Path(tmpdir) / "aws_pricing.json"
+            sync_mock_costs.write_json({"instance_types": {"t3.large": {"monthly_estimate": 60.74}}}, pricing_path)
+
+            pricing_data, refreshed = sync_mock_costs.load_or_refresh_pricing_data(
+                {"instances": []},
+                pricing_path,
+                False,
+                "us-east-1",
+                "us-east-1",
+                None,
+            )
+
+        self.assertFalse(refreshed)
+        self.assertIn("t3.large", pricing_data["instance_types"])
+
     def test_write_json_creates_output_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "billing.json"

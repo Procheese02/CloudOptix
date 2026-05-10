@@ -186,15 +186,15 @@ python3 build_rag.py
 python3 generate_mock.py --fleet-size 60 --seed 42 --output data/mock_billing.json
 ```
 
-生成器会创建一个可复现的 50+ 台 EC2 fleet，包含健康实例、低利用率实例、受保护生产实例、最低规格实例和临时 autoscaling 实例。生成的 JSON 默认只保留在本地，因为 `data/*.json` 已被忽略；需要刷新 demo 数据时重新运行该命令即可。
+生成器会创建一个可复现的 50+ 台 EC2 fleet，包含健康实例、低利用率实例、受保护生产实例、最低规格实例和临时 autoscaling 实例。基线 mock 账单文件会作为 static demo data 提交到仓库，因此本地开发、测试和离线演示都不需要 AWS 凭证。
 
-如果你已经用 AWS Pricing API 刷新了 `data/aws_pricing.json`，可以在分析前把 mock 账单成本同步成当前 On-Demand 价格：
+如果想让 static mock data 跟随当前 AWS On-Demand 价格，可以让同步脚本先刷新 AWS Pricing API 数据，再更新 mock 账单成本：
 
 ```bash
-python3 sync_mock_costs.py --billing-file data/mock_billing.json --pricing-file data/aws_pricing.json --output data/mock_billing.json
+python3 sync_mock_costs.py --refresh-aws-pricing --billing-file data/mock_billing.json --pricing-file data/aws_pricing.json --output data/mock_billing.json
 ```
 
-这样 demo 叙事会保持一致：模拟 utilization + 真实 AWS On-Demand price estimates。
+这样 demo 叙事会保持一致：模拟 utilization + 真实 AWS On-Demand price estimates。如果当前没有 AWS 凭证或网络访问，跳过 `--refresh-aws-pricing` 即可，工作流会继续使用已提交的 static pricing baseline。
 
 ### 可选：导出只读 AWS Cost Explorer 数据
 

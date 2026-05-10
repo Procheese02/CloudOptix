@@ -4,9 +4,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import fetch_aws_pricing
+
 PROJECT_ROOT = Path(__file__).resolve().parent
 DEFAULT_BILLING_PATH = PROJECT_ROOT / "data" / "mock_billing.json"
 DEFAULT_PRICING_PATH = PROJECT_ROOT / "data" / "aws_pricing.json"
+DEFAULT_REGION = "us-east-1"
 
 
 def parse_args() -> argparse.Namespace:
@@ -14,6 +17,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--billing-file", type=Path, default=DEFAULT_BILLING_PATH, help="Mock billing JSON file to update.")
     parser.add_argument("--pricing-file", type=Path, default=DEFAULT_PRICING_PATH, help="Structured AWS pricing JSON file.")
     parser.add_argument("--output", type=Path, help="Output billing JSON path. Defaults to overwriting --billing-file.")
+    parser.add_argument("--refresh-aws-pricing", action="store_true", help="Fetch current AWS Pricing API data before syncing costs.")
+    parser.add_argument("--region", default=DEFAULT_REGION, help="EC2 region code to price when refreshing AWS pricing.")
+    parser.add_argument("--pricing-region", default=DEFAULT_REGION, help="AWS Pricing API endpoint region.")
+    parser.add_argument(
+        "--instance-types",
+        help="Comma-separated EC2 instance types to refresh. Defaults to the types present in the billing file.",
+    )
     return parser.parse_args()
 
 
@@ -33,6 +43,38 @@ def get_instances(billing_data: dict[str, Any]) -> list[dict[str, Any]]:
     if billing_data.get("instance_id"):
         return [billing_data]
     return []
+
+
+def instance_types_from_billing(billing_data: dict[str, Any]) -> list[str]:
+    return sorted({
+        str(instance["instance_type"])
+        for instance in get_instances(billing_data)
+        if instance.get("instance_type")
+    })
+
+
+def load_or_refresh_pricing_data(
+    billing_data: dict[str, Any],
+    pricing_path: Path,
+    refresh_aws_pricing: bool,
+    region: str,
+    pricing_region: str,
+    instance_types_value: str | None,
+) -> tuple[dict[str, Any], bool]:
+    if not refresh_aws_pricing:
+        return load_json(pricing_path), False
+
+    if instance_types_value:
+        instance_types = fetch_aws_pricing.parse_instance_types(instance_types_value)
+    else:
+        instance_types = instance_types_from_billing(billing_data)
+
+    if not instance_types:
+        raise ValueError("billing data does not include any instance types to refresh")
+
+    pricing_data = fetch_aws_pricing.fetch_pricing_data(region, pricing_region, instance_types, pricing_path)
+    fetch_aws_pricing.write_pricing_data(pricing_data, pricing_path)
+    return pricing_data, True
 
 
 def pricing_monthly_estimates(pricing_data: dict[str, Any]) -> dict[str, float]:
@@ -79,7 +121,7 @@ def sync_billing_costs(billing_data: dict[str, Any], pricing_data: dict[str, Any
 
     pricing_metadata = pricing_data.get("metadata", {})
     billing_data["cost_sync"] = {
-        "source": "aws_pricing_json",
+        "source": pricing_metadata.get("source", {}).get("name", "aws_pricing_json"),
         "pricing_name": pricing_metadata.get("name"),
         "pricing_region": pricing_metadata.get("region"),
         "synced_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
@@ -105,10 +147,19 @@ def main() -> None:
     output_path = resolve_path(args.output) if args.output else billing_path
 
     billing_data = load_json(billing_path)
-    pricing_data = load_json(pricing_path)
+    pricing_data, refreshed_pricing = load_or_refresh_pricing_data(
+        billing_data,
+        pricing_path,
+        args.refresh_aws_pricing,
+        args.region,
+        args.pricing_region,
+        args.instance_types,
+    )
     synced_data, summary = sync_billing_costs(billing_data, pricing_data)
     write_json(synced_data, output_path)
 
+    if refreshed_pricing:
+        print(f"Refreshed AWS pricing for {len(pricing_data['instance_types'])} instance types at {pricing_path}")
     print(f"Updated {summary['updated_instance_count']} billing records at {output_path}")
     if summary["unchanged_instance_types"]:
         print("Unchanged instance types: " + ", ".join(summary["unchanged_instance_types"]))

@@ -1,0 +1,110 @@
+{
+  "metadata": {
+    "name": "AWS EC2 us-east-1 On-Demand pricing reference",
+    "effective_year": 2026,
+    "region": "us-east-1",
+    "currency": "USD",
+    "category": "compute",
+    "scope": "ec2",
+    "action": "downsizing",
+    "source": {
+      "name": "aws_pricing_api",
+      "pricing_region": "us-east-1",
+      "operating_system": "Linux",
+      "tenancy": "Shared",
+      "pre_installed_sw": "NA",
+      "capacity_status": "Used",
+      "fetched_at": "2026-05-10T13:50:30.227651Z"
+    }
+  },
+  "instance_types": {
+    "t3.2xlarge": {
+      "vcpu": 8,
+      "memory_gib": 32.0,
+      "hourly_price": 0.3328,
+      "monthly_estimate": 242.94
+    },
+    "t3.large": {
+      "vcpu": 2,
+      "memory_gib": 8.0,
+      "hourly_price": 0.0832,
+      "monthly_estimate": 60.74
+    },
+    "t3.medium": {
+      "vcpu": 2,
+      "memory_gib": 4.0,
+      "hourly_price": 0.0416,
+      "monthly_estimate": 30.37
+    },
+    "t3.micro": {
+      "vcpu": 2,
+      "memory_gib": 1.0,
+      "hourly_price": 0.0104,
+      "monthly_estimate": 7.59
+    },
+    "t3.xlarge": {
+      "vcpu": 4,
+      "memory_gib": 16.0,
+      "hourly_price": 0.1664,
+      "monthly_estimate": 121.47
+    }
+  },
+  "downgrade_rules": [
+    {
+      "name": "two_step_low_utilization_downsize",
+      "category": "compute",
+      "scope": "ec2",
+      "action": "downsizing",
+      "avg_cpu_below_percent": 10,
+      "peak_cpu_at_or_below_percent": 30,
+      "avg_memory_below_percent": 20,
+      "recommendation": "Downgrade at least two sizes when average CPU is below 10%, peak CPU does not exceed 30%, and memory utilization is below 20%.",
+      "downgrade_steps": 2,
+      "instance_order": [
+        "t3.micro",
+        "t3.small",
+        "t3.medium",
+        "t3.large",
+        "t3.xlarge",
+        "t3.2xlarge"
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "name": "minimum_size_guardrail",
+      "category": "compute",
+      "scope": "ec2",
+      "action": "downsizing",
+      "description": "Do not recommend automatic downsizing for instances already at the minimum supported size."
+    },
+    {
+      "name": "protected_workload_guardrail",
+      "category": "compute",
+      "scope": "ec2",
+      "action": "downsizing",
+      "description": "Instances marked protected require manual owner review even if utilization is low."
+    },
+    {
+      "name": "production_manual_review",
+      "category": "compute",
+      "scope": "ec2",
+      "action": "downsizing",
+      "description": "Production workloads should be treated as medium risk and reviewed before execution."
+    },
+    {
+      "name": "missing_utilization_guardrail",
+      "category": "compute",
+      "scope": "ec2",
+      "action": "downsizing",
+      "description": "Do not generate automatic rightsizing recommendations when CPU or memory utilization data is missing."
+    },
+    {
+      "name": "cost_explorer_cost_only_guardrail",
+      "category": "compute",
+      "scope": "ec2",
+      "action": "downsizing",
+      "description": "AWS Cost Explorer exports contain cost data only and should be used for cost analysis until CloudWatch or Compute Optimizer utilization is joined."
+    }
+  ]
+}

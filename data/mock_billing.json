@@ -1,0 +1,886 @@
+{
+  "report_id": "BILL-2026-05-MOCK-FLEET",
+  "resource_type": "AWS EC2",
+  "region": "us-east-1",
+  "generated_at": "2026-05-09T00:00:00Z",
+  "simulation": {
+    "seed": 42,
+    "base_fleet_size": 60,
+    "autoscale_temporary_instances": 4,
+    "cpu_volatility_percent": 5.0
+  },
+  "instances": [
+    {
+      "instance_id": "i-0ec2000000000000",
+      "instance_type": "t3.2xlarge",
+      "monthly_cost": 242.94,
+      "environment": "dev",
+      "owner": "platform-team",
+      "workload": "batch",
+      "metrics": {
+        "avg_cpu_utilization": "1.00%",
+        "peak_cpu_utilization": "15.42%",
+        "avg_memory_utilization": "8.45%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000001",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "api-team",
+      "workload": "api",
+      "metrics": {
+        "avg_cpu_utilization": "9.86%",
+        "peak_cpu_utilization": "25.77%",
+        "avg_memory_utilization": "19.92%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000002",
+      "instance_type": "t3.medium",
+      "monthly_cost": 30.37,
+      "environment": "production",
+      "owner": "checkout-team",
+      "workload": "worker",
+      "metrics": {
+        "avg_cpu_utilization": "32.90%",
+        "peak_cpu_utilization": "60.32%",
+        "avg_memory_utilization": "43.94%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000003",
+      "instance_type": "t3.medium",
+      "monthly_cost": 30.37,
+      "environment": "dev",
+      "owner": "web-team",
+      "workload": "web",
+      "metrics": {
+        "avg_cpu_utilization": "58.05%",
+        "peak_cpu_utilization": "83.27%",
+        "avg_memory_utilization": "66.99%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000004",
+      "instance_type": "t3.2xlarge",
+      "monthly_cost": 242.94,
+      "environment": "staging",
+      "owner": "data-team",
+      "workload": "etl",
+      "metrics": {
+        "avg_cpu_utilization": "8.01%",
+        "peak_cpu_utilization": "18.20%",
+        "avg_memory_utilization": "13.49%"
+      },
+      "protected": true,
+      "do_not_touch_reason": "production or owner-protected workload requires manual review"
+    },
+    {
+      "instance_id": "i-0ec2000000000005",
+      "instance_type": "t3.micro",
+      "monthly_cost": 7.59,
+      "environment": "production",
+      "owner": "ml-platform-team",
+      "workload": "ml",
+      "metrics": {
+        "avg_cpu_utilization": "2.78%",
+        "peak_cpu_utilization": "19.69%",
+        "avg_memory_utilization": "14.59%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000006",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "dev",
+      "owner": "analytics-team",
+      "workload": "cache",
+      "metrics": {
+        "avg_cpu_utilization": "6.48%",
+        "peak_cpu_utilization": "11.40%",
+        "avg_memory_utilization": "7.55%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000007",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "staging",
+      "owner": "payments-team",
+      "workload": "search",
+      "metrics": {
+        "avg_cpu_utilization": "3.52%",
+        "peak_cpu_utilization": "22.80%",
+        "avg_memory_utilization": "14.59%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000008",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "production",
+      "owner": "platform-team",
+      "workload": "batch",
+      "metrics": {
+        "avg_cpu_utilization": "33.04%",
+        "peak_cpu_utilization": "68.07%",
+        "avg_memory_utilization": "50.30%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000009",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "dev",
+      "owner": "api-team",
+      "workload": "api",
+      "metrics": {
+        "avg_cpu_utilization": "54.25%",
+        "peak_cpu_utilization": "92.22%",
+        "avg_memory_utilization": "65.79%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000000a",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "staging",
+      "owner": "checkout-team",
+      "workload": "worker",
+      "metrics": {
+        "avg_cpu_utilization": "9.29%",
+        "peak_cpu_utilization": "20.19%",
+        "avg_memory_utilization": "17.62%"
+      },
+      "protected": true,
+      "do_not_touch_reason": "production or owner-protected workload requires manual review"
+    },
+    {
+      "instance_id": "i-0ec200000000000b",
+      "instance_type": "t3.micro",
+      "monthly_cost": 7.59,
+      "environment": "production",
+      "owner": "web-team",
+      "workload": "web",
+      "metrics": {
+        "avg_cpu_utilization": "5.77%",
+        "peak_cpu_utilization": "18.05%",
+        "avg_memory_utilization": "7.46%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000000c",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "dev",
+      "owner": "data-team",
+      "workload": "etl",
+      "metrics": {
+        "avg_cpu_utilization": "7.23%",
+        "peak_cpu_utilization": "17.85%",
+        "avg_memory_utilization": "14.55%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000000d",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "ml-platform-team",
+      "workload": "ml",
+      "metrics": {
+        "avg_cpu_utilization": "6.30%",
+        "peak_cpu_utilization": "23.53%",
+        "avg_memory_utilization": "19.34%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000000e",
+      "instance_type": "t3.medium",
+      "monthly_cost": 30.37,
+      "environment": "production",
+      "owner": "analytics-team",
+      "workload": "cache",
+      "metrics": {
+        "avg_cpu_utilization": "30.70%",
+        "peak_cpu_utilization": "62.10%",
+        "avg_memory_utilization": "45.67%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000000f",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "dev",
+      "owner": "payments-team",
+      "workload": "search",
+      "metrics": {
+        "avg_cpu_utilization": "59.48%",
+        "peak_cpu_utilization": "89.09%",
+        "avg_memory_utilization": "66.71%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000010",
+      "instance_type": "t3.2xlarge",
+      "monthly_cost": 242.94,
+      "environment": "staging",
+      "owner": "platform-team",
+      "workload": "batch",
+      "metrics": {
+        "avg_cpu_utilization": "3.45%",
+        "peak_cpu_utilization": "18.62%",
+        "avg_memory_utilization": "11.70%"
+      },
+      "protected": true,
+      "do_not_touch_reason": "production or owner-protected workload requires manual review"
+    },
+    {
+      "instance_id": "i-0ec2000000000011",
+      "instance_type": "t3.micro",
+      "monthly_cost": 7.59,
+      "environment": "production",
+      "owner": "api-team",
+      "workload": "api",
+      "metrics": {
+        "avg_cpu_utilization": "9.25%",
+        "peak_cpu_utilization": "17.88%",
+        "avg_memory_utilization": "9.20%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000012",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "dev",
+      "owner": "checkout-team",
+      "workload": "worker",
+      "metrics": {
+        "avg_cpu_utilization": "7.93%",
+        "peak_cpu_utilization": "15.76%",
+        "avg_memory_utilization": "8.29%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000013",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "web-team",
+      "workload": "web",
+      "metrics": {
+        "avg_cpu_utilization": "10.55%",
+        "peak_cpu_utilization": "23.01%",
+        "avg_memory_utilization": "11.66%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000014",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "production",
+      "owner": "data-team",
+      "workload": "etl",
+      "metrics": {
+        "avg_cpu_utilization": "35.76%",
+        "peak_cpu_utilization": "63.15%",
+        "avg_memory_utilization": "49.55%"
+      },
+      "protected": true,
+      "do_not_touch_reason": "production or owner-protected workload requires manual review"
+    },
+    {
+      "instance_id": "i-0ec2000000000015",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "dev",
+      "owner": "ml-platform-team",
+      "workload": "ml",
+      "metrics": {
+        "avg_cpu_utilization": "61.85%",
+        "peak_cpu_utilization": "89.43%",
+        "avg_memory_utilization": "66.43%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000016",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "analytics-team",
+      "workload": "cache",
+      "metrics": {
+        "avg_cpu_utilization": "3.47%",
+        "peak_cpu_utilization": "19.61%",
+        "avg_memory_utilization": "11.63%"
+      },
+      "protected": true,
+      "do_not_touch_reason": "production or owner-protected workload requires manual review"
+    },
+    {
+      "instance_id": "i-0ec2000000000017",
+      "instance_type": "t3.micro",
+      "monthly_cost": 7.59,
+      "environment": "production",
+      "owner": "payments-team",
+      "workload": "search",
+      "metrics": {
+        "avg_cpu_utilization": "5.85%",
+        "peak_cpu_utilization": "19.98%",
+        "avg_memory_utilization": "10.99%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000018",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "dev",
+      "owner": "platform-team",
+      "workload": "batch",
+      "metrics": {
+        "avg_cpu_utilization": "9.47%",
+        "peak_cpu_utilization": "12.47%",
+        "avg_memory_utilization": "10.94%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000019",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "api-team",
+      "workload": "api",
+      "metrics": {
+        "avg_cpu_utilization": "11.11%",
+        "peak_cpu_utilization": "20.53%",
+        "avg_memory_utilization": "12.60%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000001a",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "production",
+      "owner": "checkout-team",
+      "workload": "worker",
+      "metrics": {
+        "avg_cpu_utilization": "31.22%",
+        "peak_cpu_utilization": "60.64%",
+        "avg_memory_utilization": "46.82%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000001b",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "dev",
+      "owner": "web-team",
+      "workload": "web",
+      "metrics": {
+        "avg_cpu_utilization": "58.29%",
+        "peak_cpu_utilization": "92.71%",
+        "avg_memory_utilization": "73.61%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000001c",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "data-team",
+      "workload": "etl",
+      "metrics": {
+        "avg_cpu_utilization": "7.80%",
+        "peak_cpu_utilization": "15.15%",
+        "avg_memory_utilization": "17.85%"
+      },
+      "protected": true,
+      "do_not_touch_reason": "production or owner-protected workload requires manual review"
+    },
+    {
+      "instance_id": "i-0ec200000000001d",
+      "instance_type": "t3.micro",
+      "monthly_cost": 7.59,
+      "environment": "production",
+      "owner": "ml-platform-team",
+      "workload": "ml",
+      "metrics": {
+        "avg_cpu_utilization": "7.51%",
+        "peak_cpu_utilization": "18.69%",
+        "avg_memory_utilization": "10.40%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000001e",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "dev",
+      "owner": "analytics-team",
+      "workload": "cache",
+      "metrics": {
+        "avg_cpu_utilization": "3.85%",
+        "peak_cpu_utilization": "12.54%",
+        "avg_memory_utilization": "15.54%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000001f",
+      "instance_type": "t3.2xlarge",
+      "monthly_cost": 242.94,
+      "environment": "staging",
+      "owner": "payments-team",
+      "workload": "search",
+      "metrics": {
+        "avg_cpu_utilization": "5.13%",
+        "peak_cpu_utilization": "24.01%",
+        "avg_memory_utilization": "12.79%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000020",
+      "instance_type": "t3.medium",
+      "monthly_cost": 30.37,
+      "environment": "production",
+      "owner": "platform-team",
+      "workload": "batch",
+      "metrics": {
+        "avg_cpu_utilization": "35.71%",
+        "peak_cpu_utilization": "62.98%",
+        "avg_memory_utilization": "49.39%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000021",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "dev",
+      "owner": "api-team",
+      "workload": "api",
+      "metrics": {
+        "avg_cpu_utilization": "54.99%",
+        "peak_cpu_utilization": "86.74%",
+        "avg_memory_utilization": "66.62%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000022",
+      "instance_type": "t3.2xlarge",
+      "monthly_cost": 242.94,
+      "environment": "staging",
+      "owner": "checkout-team",
+      "workload": "worker",
+      "metrics": {
+        "avg_cpu_utilization": "10.18%",
+        "peak_cpu_utilization": "19.99%",
+        "avg_memory_utilization": "13.89%"
+      },
+      "protected": true,
+      "do_not_touch_reason": "production or owner-protected workload requires manual review"
+    },
+    {
+      "instance_id": "i-0ec2000000000023",
+      "instance_type": "t3.micro",
+      "monthly_cost": 7.59,
+      "environment": "production",
+      "owner": "web-team",
+      "workload": "web",
+      "metrics": {
+        "avg_cpu_utilization": "1.12%",
+        "peak_cpu_utilization": "14.63%",
+        "avg_memory_utilization": "16.85%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000024",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "dev",
+      "owner": "data-team",
+      "workload": "etl",
+      "metrics": {
+        "avg_cpu_utilization": "1.89%",
+        "peak_cpu_utilization": "10.41%",
+        "avg_memory_utilization": "11.67%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000025",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "ml-platform-team",
+      "workload": "ml",
+      "metrics": {
+        "avg_cpu_utilization": "3.36%",
+        "peak_cpu_utilization": "23.86%",
+        "avg_memory_utilization": "11.69%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000026",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "production",
+      "owner": "analytics-team",
+      "workload": "cache",
+      "metrics": {
+        "avg_cpu_utilization": "34.66%",
+        "peak_cpu_utilization": "61.28%",
+        "avg_memory_utilization": "47.75%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000027",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "dev",
+      "owner": "payments-team",
+      "workload": "search",
+      "metrics": {
+        "avg_cpu_utilization": "54.65%",
+        "peak_cpu_utilization": "88.28%",
+        "avg_memory_utilization": "71.07%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000028",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "platform-team",
+      "workload": "batch",
+      "metrics": {
+        "avg_cpu_utilization": "10.29%",
+        "peak_cpu_utilization": "21.55%",
+        "avg_memory_utilization": "15.90%"
+      },
+      "protected": true,
+      "do_not_touch_reason": "production or owner-protected workload requires manual review"
+    },
+    {
+      "instance_id": "i-0ec2000000000029",
+      "instance_type": "t3.micro",
+      "monthly_cost": 7.59,
+      "environment": "production",
+      "owner": "api-team",
+      "workload": "api",
+      "metrics": {
+        "avg_cpu_utilization": "7.13%",
+        "peak_cpu_utilization": "14.99%",
+        "avg_memory_utilization": "13.72%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000002a",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "dev",
+      "owner": "checkout-team",
+      "workload": "worker",
+      "metrics": {
+        "avg_cpu_utilization": "3.88%",
+        "peak_cpu_utilization": "13.18%",
+        "avg_memory_utilization": "7.21%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000002b",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "web-team",
+      "workload": "web",
+      "metrics": {
+        "avg_cpu_utilization": "3.14%",
+        "peak_cpu_utilization": "19.21%",
+        "avg_memory_utilization": "16.54%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000002c",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "production",
+      "owner": "data-team",
+      "workload": "etl",
+      "metrics": {
+        "avg_cpu_utilization": "29.20%",
+        "peak_cpu_utilization": "60.71%",
+        "avg_memory_utilization": "49.31%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000002d",
+      "instance_type": "t3.medium",
+      "monthly_cost": 30.37,
+      "environment": "dev",
+      "owner": "ml-platform-team",
+      "workload": "ml",
+      "metrics": {
+        "avg_cpu_utilization": "53.67%",
+        "peak_cpu_utilization": "83.31%",
+        "avg_memory_utilization": "68.30%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000002e",
+      "instance_type": "t3.2xlarge",
+      "monthly_cost": 242.94,
+      "environment": "staging",
+      "owner": "analytics-team",
+      "workload": "cache",
+      "metrics": {
+        "avg_cpu_utilization": "3.38%",
+        "peak_cpu_utilization": "20.69%",
+        "avg_memory_utilization": "11.14%"
+      },
+      "protected": true,
+      "do_not_touch_reason": "production or owner-protected workload requires manual review"
+    },
+    {
+      "instance_id": "i-0ec200000000002f",
+      "instance_type": "t3.micro",
+      "monthly_cost": 7.59,
+      "environment": "production",
+      "owner": "payments-team",
+      "workload": "search",
+      "metrics": {
+        "avg_cpu_utilization": "1.32%",
+        "peak_cpu_utilization": "20.36%",
+        "avg_memory_utilization": "12.71%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000030",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "dev",
+      "owner": "platform-team",
+      "workload": "batch",
+      "metrics": {
+        "avg_cpu_utilization": "1.93%",
+        "peak_cpu_utilization": "12.73%",
+        "avg_memory_utilization": "10.07%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000031",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "api-team",
+      "workload": "api",
+      "metrics": {
+        "avg_cpu_utilization": "3.47%",
+        "peak_cpu_utilization": "23.31%",
+        "avg_memory_utilization": "15.24%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000032",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "production",
+      "owner": "checkout-team",
+      "workload": "worker",
+      "metrics": {
+        "avg_cpu_utilization": "35.64%",
+        "peak_cpu_utilization": "60.54%",
+        "avg_memory_utilization": "49.53%"
+      },
+      "protected": true,
+      "do_not_touch_reason": "production or owner-protected workload requires manual review"
+    },
+    {
+      "instance_id": "i-0ec2000000000033",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 121.47,
+      "environment": "dev",
+      "owner": "web-team",
+      "workload": "web",
+      "metrics": {
+        "avg_cpu_utilization": "53.98%",
+        "peak_cpu_utilization": "87.03%",
+        "avg_memory_utilization": "68.39%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000034",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "data-team",
+      "workload": "etl",
+      "metrics": {
+        "avg_cpu_utilization": "3.49%",
+        "peak_cpu_utilization": "15.90%",
+        "avg_memory_utilization": "13.49%"
+      },
+      "protected": true,
+      "do_not_touch_reason": "production or owner-protected workload requires manual review"
+    },
+    {
+      "instance_id": "i-0ec2000000000035",
+      "instance_type": "t3.micro",
+      "monthly_cost": 7.59,
+      "environment": "production",
+      "owner": "ml-platform-team",
+      "workload": "ml",
+      "metrics": {
+        "avg_cpu_utilization": "4.22%",
+        "peak_cpu_utilization": "13.79%",
+        "avg_memory_utilization": "9.50%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000036",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "dev",
+      "owner": "analytics-team",
+      "workload": "cache",
+      "metrics": {
+        "avg_cpu_utilization": "3.93%",
+        "peak_cpu_utilization": "16.61%",
+        "avg_memory_utilization": "11.50%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000037",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "payments-team",
+      "workload": "search",
+      "metrics": {
+        "avg_cpu_utilization": "9.02%",
+        "peak_cpu_utilization": "24.41%",
+        "avg_memory_utilization": "11.15%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000038",
+      "instance_type": "t3.medium",
+      "monthly_cost": 30.37,
+      "environment": "production",
+      "owner": "platform-team",
+      "workload": "batch",
+      "metrics": {
+        "avg_cpu_utilization": "36.26%",
+        "peak_cpu_utilization": "68.49%",
+        "avg_memory_utilization": "44.66%"
+      }
+    },
+    {
+      "instance_id": "i-0ec2000000000039",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "dev",
+      "owner": "api-team",
+      "workload": "api",
+      "metrics": {
+        "avg_cpu_utilization": "57.81%",
+        "peak_cpu_utilization": "91.65%",
+        "avg_memory_utilization": "74.02%"
+      }
+    },
+    {
+      "instance_id": "i-0ec200000000003a",
+      "instance_type": "t3.large",
+      "monthly_cost": 60.74,
+      "environment": "staging",
+      "owner": "checkout-team",
+      "workload": "worker",
+      "metrics": {
+        "avg_cpu_utilization": "4.79%",
+        "peak_cpu_utilization": "23.85%",
+        "avg_memory_utilization": "11.65%"
+      },
+      "protected": true,
+      "do_not_touch_reason": "production or owner-protected workload requires manual review"
+    },
+    {
+      "instance_id": "i-0ec200000000003b",
+      "instance_type": "t3.micro",
+      "monthly_cost": 7.59,
+      "environment": "production",
+      "owner": "web-team",
+      "workload": "web",
+      "metrics": {
+        "avg_cpu_utilization": "7.84%",
+        "peak_cpu_utilization": "15.55%",
+        "avg_memory_utilization": "11.23%"
+      }
+    },
+    {
+      "instance_id": "i-0temp00000000003c",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 26.93,
+      "environment": "dev",
+      "owner": "data-team",
+      "workload": "web",
+      "temporary": true,
+      "autoscaling_group": "cloudoptix-demo-asg-1",
+      "metrics": {
+        "avg_cpu_utilization": "36.57%",
+        "peak_cpu_utilization": "69.95%",
+        "avg_memory_utilization": "48.56%"
+      }
+    },
+    {
+      "instance_id": "i-0temp00000000003d",
+      "instance_type": "t3.medium",
+      "monthly_cost": 3.42,
+      "environment": "staging",
+      "owner": "checkout-team",
+      "workload": "batch",
+      "temporary": true,
+      "autoscaling_group": "cloudoptix-demo-asg-3",
+      "metrics": {
+        "avg_cpu_utilization": "32.79%",
+        "peak_cpu_utilization": "65.42%",
+        "avg_memory_utilization": "50.48%"
+      }
+    },
+    {
+      "instance_id": "i-0temp00000000003e",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 38.32,
+      "environment": "staging",
+      "owner": "api-team",
+      "workload": "web",
+      "temporary": true,
+      "autoscaling_group": "cloudoptix-demo-asg-3",
+      "metrics": {
+        "avg_cpu_utilization": "27.80%",
+        "peak_cpu_utilization": "61.86%",
+        "avg_memory_utilization": "48.95%"
+      }
+    },
+    {
+      "instance_id": "i-0temp00000000003f",
+      "instance_type": "t3.xlarge",
+      "monthly_cost": 29.31,
+      "environment": "staging",
+      "owner": "data-team",
+      "workload": "web",
+      "temporary": true,
+      "autoscaling_group": "cloudoptix-demo-asg-3",
+      "metrics": {
+        "avg_cpu_utilization": "32.95%",
+        "peak_cpu_utilization": "66.19%",
+        "avg_memory_utilization": "47.19%"
+      }
+    }
+  ],
+  "cost_sync": {
+    "source": "aws_pricing_api",
+    "pricing_name": "AWS EC2 us-east-1 On-Demand pricing reference",
+    "pricing_region": "us-east-1",
+    "synced_at": "2026-05-10T13:50:30.228353Z",
+    "updated_instance_count": 64,
+    "unchanged_instance_types": []
+  }
+}
