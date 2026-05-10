@@ -71,6 +71,42 @@ def get_instances(billing_data: dict[str, Any]) -> list[dict[str, Any]]:
     return []
 
 
+def ec2_metadata_to_instances(ec2_metadata: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {"instance_id": instance_id, **metadata}
+        for instance_id, metadata in sorted(ec2_metadata.items())
+    ]
+
+
+def grouped_costs(billing_data: dict[str, Any]) -> dict[tuple[str, str], float]:
+    costs = {}
+    for item in get_instances(billing_data):
+        cost_group = item.get("cost_group", {})
+        instance_type = cost_group.get("instance_type") or item.get("instance_type")
+        region = cost_group.get("region") or billing_data.get("region", "unknown")
+        costs[(str(region), str(instance_type))] = float(item.get("monthly_cost", 0) or 0)
+    return costs
+
+
+def allocate_grouped_costs(
+    ec2_metadata: dict[str, dict[str, Any]],
+    billing_data: dict[str, Any],
+    region: str,
+) -> dict[str, float]:
+    costs = grouped_costs(billing_data)
+    counts: dict[tuple[str, str], int] = {}
+    for metadata in ec2_metadata.values():
+        key = (region, str(metadata.get("instance_type", "unknown")))
+        counts[key] = counts.get(key, 0) + 1
+
+    allocated = {}
+    for instance_id, metadata in ec2_metadata.items():
+        key = (region, str(metadata.get("instance_type", "unknown")))
+        group_cost = costs.get(key, 0.0)
+        allocated[instance_id] = round(group_cost / counts[key], 2) if counts.get(key) and group_cost > 0 else 0.0
+    return allocated
+
+
 def tag_map(tags: list[dict[str, str]]) -> dict[str, str]:
     return {tag.get("Key", ""): tag.get("Value", "") for tag in tags if tag.get("Key")}
 
@@ -177,6 +213,8 @@ def enrich_instance(
     instance: dict[str, Any],
     ec2_metadata: dict[str, dict[str, Any]],
     cloudwatch_metrics: dict[str, Any],
+    monthly_cost: float | None = None,
+    cost_allocation: str | None = None,
 ) -> dict[str, Any]:
     instance_id = instance.get("instance_id", "")
     metadata = ec2_metadata.get(instance_id, {})
@@ -186,6 +224,10 @@ def enrich_instance(
         value = metadata.get(field)
         if value:
             enriched[field] = value
+
+    if monthly_cost is not None:
+        enriched["monthly_cost"] = monthly_cost
+        enriched["cost_allocation"] = cost_allocation or "allocated_from_cost_explorer_instance_type_region_group"
 
     if metadata.get("tags"):
         enriched["tags"] = metadata["tags"]
@@ -211,6 +253,17 @@ def enrich_instance(
     return enriched
 
 
+def source_instances_for_enrichment(
+    billing_data: dict[str, Any],
+    ec2_metadata: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], bool]:
+    billing_instances = get_instances(billing_data)
+    has_cost_groups = any(instance.get("cost_group") for instance in billing_instances)
+    if has_cost_groups or not billing_instances:
+        return ec2_metadata_to_instances(ec2_metadata), not billing_instances
+    return billing_instances, False
+
+
 def enrich_billing_data(
     billing_data: dict[str, Any],
     ec2_metadata: dict[str, dict[str, Any]],
@@ -219,9 +272,17 @@ def enrich_billing_data(
     start: datetime,
     end: datetime,
 ) -> dict[str, Any]:
+    allocated_costs = allocate_grouped_costs(ec2_metadata, billing_data, region)
+    source_instances, missing_cost_explorer_data = source_instances_for_enrichment(billing_data, ec2_metadata)
     instances = [
-        enrich_instance(instance, ec2_metadata, metrics_by_instance.get(str(instance.get("instance_id", "")), {}))
-        for instance in get_instances(billing_data)
+        enrich_instance(
+            instance,
+            ec2_metadata,
+            metrics_by_instance.get(str(instance.get("instance_id", "")), {}),
+            allocated_costs.get(str(instance.get("instance_id", "")), 0.0) if missing_cost_explorer_data else allocated_costs.get(str(instance.get("instance_id", ""))),
+            "missing_cost_explorer_data" if missing_cost_explorer_data else None,
+        )
+        for instance in source_instances
     ]
     enriched = dict(billing_data)
     enriched["instances"] = instances
@@ -242,7 +303,10 @@ def enrich_billing_data(
             "DiskWriteBytes",
         ],
         "memory_note": "EC2 memory utilization requires CloudWatch Agent and is not included in default CloudWatch metrics.",
+        "cost_allocation_note": "Cost Explorer GetCostAndUsage is grouped by INSTANCE_TYPE and REGION, so per-instance costs are evenly allocated within each group.",
     }
+    if missing_cost_explorer_data:
+        enriched["source"]["cost_allocation_note"] = "Cost Explorer returned no EC2 cost records, so EC2 instances are included with monthly_cost set to 0.0."
     return enriched
 
 
@@ -262,9 +326,8 @@ def main() -> None:
         ec2_metadata = fetch_ec2_metadata(args.region)
         cloudwatch = boto3.client("cloudwatch", region_name=args.region)
         metrics_by_instance = {
-            str(instance.get("instance_id")): fetch_instance_metrics(cloudwatch, str(instance.get("instance_id")), start, end, args.period)
-            for instance in get_instances(billing_data)
-            if str(instance.get("instance_id", "")).startswith("i-")
+            instance_id: fetch_instance_metrics(cloudwatch, instance_id, start, end, args.period)
+            for instance_id in ec2_metadata
         }
     except (BotoCoreError, ClientError) as exc:
         raise SystemExit(f"Failed to read AWS CloudWatch data: {exc}") from exc

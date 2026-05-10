@@ -28,11 +28,6 @@ def parse_args() -> argparse.Namespace:
         default=os.environ.get("AWS_DEFAULT_REGION", "us-east-1"),
         help="Region used for the Cost Explorer API client.",
     )
-    parser.add_argument(
-        "--include-non-instance-resources",
-        action="store_true",
-        help="Include Cost Explorer resource IDs that do not look like EC2 instance IDs.",
-    )
     return parser.parse_args()
 
 
@@ -73,8 +68,8 @@ def fetch_cost_groups(start: str, end: str, ce_region: str) -> list[dict[str, An
             }
         },
         "GroupBy": [
-            {"Type": "DIMENSION", "Key": "RESOURCE_ID"},
             {"Type": "DIMENSION", "Key": "INSTANCE_TYPE"},
+            {"Type": "DIMENSION", "Key": "REGION"},
         ],
     }
 
@@ -94,16 +89,15 @@ def cost_amount(group: dict[str, Any]) -> float:
     return round(float(amount), 2)
 
 
-def build_instance(group: dict[str, Any], include_non_instance_resources: bool) -> dict[str, Any] | None:
+def build_instance(group: dict[str, Any]) -> dict[str, Any]:
     keys = group.get("Keys", [])
-    resource_id = keys[0] if keys else "unknown-resource"
-    instance_type = keys[1] if len(keys) > 1 and keys[1] else "unknown"
-
-    if not include_non_instance_resources and not resource_id.startswith("i-"):
-        return None
+    instance_type = keys[0] if keys else "unknown"
+    region = keys[1] if len(keys) > 1 and keys[1] else "unknown"
+    if instance_type == "NoInstanceType":
+        instance_type = "unknown"
 
     return {
-        "instance_id": resource_id,
+        "instance_id": f"cost-group-{region}-{instance_type}",
         "instance_type": instance_type,
         "monthly_cost": cost_amount(group),
         "environment": "unknown",
@@ -114,16 +108,21 @@ def build_instance(group: dict[str, Any], include_non_instance_resources: bool) 
             "peak_cpu_utilization": "100.00%",
             "avg_memory_utilization": "100.00%",
         },
+        "cost_group": {
+            "group_by": ["INSTANCE_TYPE", "REGION"],
+            "instance_type": instance_type,
+            "region": region,
+        },
         "protected": True,
-        "do_not_touch_reason": "Cost Explorer provides cost data only; utilization and ownership require separate review.",
+        "do_not_touch_reason": "Cost Explorer provides grouped cost data only; utilization and ownership require separate review.",
     }
 
 
-def build_billing_data(groups: list[dict[str, Any]], start: str, end: str, include_non_instance_resources: bool) -> dict[str, Any]:
+def build_billing_data(groups: list[dict[str, Any]], start: str, end: str) -> dict[str, Any]:
     instances = [
         instance
         for group in groups
-        if (instance := build_instance(group, include_non_instance_resources)) is not None and instance["monthly_cost"] > 0
+        if (instance := build_instance(group))["monthly_cost"] > 0
     ]
     instances.sort(key=lambda instance: instance["monthly_cost"], reverse=True)
 
@@ -137,7 +136,7 @@ def build_billing_data(groups: list[dict[str, Any]], start: str, end: str, inclu
             "service_filter": EC2_SERVICE_NAME,
             "time_period": {"start": start, "end": end},
             "metrics": ["UnblendedCost"],
-            "group_by": ["RESOURCE_ID", "INSTANCE_TYPE"],
+            "group_by": ["INSTANCE_TYPE", "REGION"],
         },
         "instances": instances,
     }
@@ -160,7 +159,7 @@ def main() -> None:
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
 
-    data = build_billing_data(groups, start, end, args.include_non_instance_resources)
+    data = build_billing_data(groups, start, end)
     write_billing_data(data, output_path)
     print(f"Fetched {len(data['instances'])} Cost Explorer EC2 cost records at {output_path}")
 
