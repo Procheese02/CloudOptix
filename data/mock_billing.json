@@ -879,7 +879,7 @@
     "source": "aws_pricing_api",
     "pricing_name": "AWS EC2 us-east-1 On-Demand pricing reference",
     "pricing_region": "us-east-1",
-    "synced_at": "2026-05-10T13:50:30.228353Z",
+    "synced_at": "2026-05-10T14:21:40.625038Z",
     "updated_instance_count": 64,
     "unchanged_instance_types": []
   }
