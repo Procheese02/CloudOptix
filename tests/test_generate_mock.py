@@ -23,10 +23,41 @@ class GenerateMockTests(unittest.TestCase):
         self.assertIn("monthly_cost", first_instance)
         self.assertIn("environment", first_instance)
         self.assertIn("owner", first_instance)
+        self.assertIn("business_unit", first_instance)
+        self.assertIn("service", first_instance)
+        self.assertIn("criticality", first_instance)
+        self.assertIn("region", first_instance)
+        self.assertIn("pricing_model", first_instance)
+        self.assertIn("utilization_pattern", first_instance)
+        self.assertIn("metrics_source", first_instance)
         self.assertIn("metrics", first_instance)
         self.assertIn("avg_cpu_utilization", first_instance["metrics"])
         self.assertIn("peak_cpu_utilization", first_instance["metrics"])
         self.assertIn("avg_memory_utilization", first_instance["metrics"])
+        self.assertIn("avg_network_mbps", first_instance["metrics"])
+
+    def test_enterprise_fleet_v2_supports_large_fleet_and_required_dimensions(self):
+        data = generate_mock.generate_billing_data(fleet_size=500, seed=42, autoscale_count=4)
+        instances = data["instances"]
+        required_fields = {
+            "business_unit",
+            "service",
+            "criticality",
+            "region",
+            "pricing_model",
+            "utilization_pattern",
+        }
+
+        self.assertEqual(data["simulation"]["version"], "enterprise_mock_fleet_v2")
+        self.assertEqual(len(instances), 504)
+        self.assertEqual(len({instance["instance_id"] for instance in instances}), 504)
+        self.assertTrue(all(required_fields.issubset(instance) for instance in instances))
+        data_200 = generate_mock.generate_billing_data(fleet_size=200, seed=42, autoscale_count=0)
+        self.assertEqual(len(data_200["instances"]), 200)
+
+        observed_patterns = {instance["utilization_pattern"] for instance in instances}
+        self.assertTrue(set(generate_mock.UTILIZATION_PATTERNS).issubset(observed_patterns))
+        self.assertTrue(any(instance["metrics_source"] == "missing" for instance in instances))
 
     def test_same_seed_generates_identical_data(self):
         first = generate_mock.generate_billing_data(fleet_size=60, seed=99, autoscale_count=4)
@@ -40,6 +71,7 @@ class GenerateMockTests(unittest.TestCase):
 
         self.assertEqual(len(temporary_instances), 6)
         self.assertTrue(all("autoscaling_group" in instance for instance in temporary_instances))
+        self.assertTrue(all("business_unit" in instance for instance in temporary_instances))
 
     def test_generated_data_is_compatible_with_tool_planning(self):
         data = generate_mock.generate_billing_data(fleet_size=60, seed=42, autoscale_count=4)
