@@ -17,8 +17,9 @@ class PersistenceTests(unittest.TestCase):
         persistence.create_schema(engine)
         SessionLocal = persistence.session_factory(engine)
         session = SessionLocal()
-        self.addCleanup(session.close)
         self.addCleanup(tmpdir.cleanup)
+        self.addCleanup(engine.dispose)
+        self.addCleanup(session.close)
         return session
 
     def persist(self, session, billing_data):

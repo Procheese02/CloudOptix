@@ -21,7 +21,7 @@ CloudOptix uses a multi-agent workflow to:
 1. Load mock AWS billing and utilization data for multiple EC2 instances by default, or optionally load read-only AWS Cost Explorer cost data exported into the same JSON shape.
 2. Detect underutilized EC2 instances and resources that should not be changed.
 3. Retrieve pricing rules and downgrade policies from a local RAG knowledge base.
-4. Generate a Markdown fleet-level cost optimization report with top savings opportunities, risk levels, and execution order.
+4. Generate a Markdown fleet-level cost optimization report from enterprise summaries, top candidates, data quality, and pricing policy context.
 5. Optionally prepare and execute AWS EC2 resize actions through `boto3` after human confirmation.
 
 By default, the project is structured around safe FinOps automation rather than uncontrolled AI execution.
@@ -39,7 +39,7 @@ CloudOptix
 ├── LangGraph Optimization Agent
 │   ├── Inspector Agent: detects underutilized resources
 │   ├── Researcher Agent: retrieves pricing and downgrade rules
-│   └── Advisor Agent: generates optimization reports
+│   └── Advisor Agent: generates optimization reports from enterprise summaries
 │
 ├── Approval Gateway
 │   └── Requires human confirmation before real AWS changes
@@ -279,7 +279,7 @@ The workflow will:
 3. Load billing data from `data/mock_billing.json`.
 4. Analyze which EC2 instances are underutilized and which resources should not be changed.
 5. Retrieve relevant pricing rules from the local knowledge base.
-6. Generate a fleet-level cost optimization report.
+6. Generate a fleet-level cost optimization report from `enterprise_summary` rather than injecting the full instance list into the LLM prompt.
 7. Generate dry-run AWS action plans by default for eligible instances.
 
 In dry-run mode, no AWS change will be made.

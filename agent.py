@@ -21,6 +21,8 @@ from llama_index.vector_stores.qdrant import QdrantVectorStore
 from openai import APIConnectionError, APIStatusError, AuthenticationError, OpenAIError
 import qdrant_client
 
+import analyze_billing
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 ENV_PATH = PROJECT_ROOT / ".env"
@@ -42,6 +44,11 @@ INSTANCE_DOWNGRADE_ORDER = [
 
 load_dotenv(dotenv_path=ENV_PATH)
 qdrant_clients: list[qdrant_client.QdrantClient] = []
+llm: ChatOpenAI | None = None
+retriever: Any | None = None
+pricing_context: str | None = None
+embedding_configured = False
+retriever_configured = False
 
 
 # ==========================================
@@ -49,6 +56,10 @@ qdrant_clients: list[qdrant_client.QdrantClient] = []
 # ==========================================
 class AgentState(TypedDict, total=False):
     billing_data: dict[str, Any]
+    billing_analysis: dict[str, Any]
+    enterprise_summary: dict[str, Any]
+    data_quality: dict[str, Any]
+    top_candidates: list[dict[str, Any]]
     needs_optimization: bool
     optimizable_instances: list[dict[str, Any]]
     protected_instances: list[dict[str, Any]]
@@ -107,6 +118,9 @@ def read_pricing_context() -> str:
 
 
 def configure_embedding_model() -> None:
+    global embedding_configured
+    if embedding_configured:
+        return
     try:
         # 强制 LlamaIndex 检索时使用 Step 2 建库时同一个本地 Embedding 模型。
         Settings.embed_model = HuggingFaceEmbedding(
@@ -115,6 +129,7 @@ def configure_embedding_model() -> None:
         )
     except Exception as exc:
         fatal(f"加载本地 Embedding 模型失败：{exc}")
+    embedding_configured = True
 
 
 def build_retriever():
@@ -133,15 +148,27 @@ def build_retriever():
         return None
 
 
-# ==========================================
-# 2. 初始化大模型和 RAG 引擎 (全局就绪)
-# ==========================================
-print("⚙️ 正在启动 AI 团队及挂载本地数据库...")
+def get_llm() -> ChatOpenAI:
+    global llm
+    if llm is None:
+        llm = build_llm()
+    return llm
 
-configure_embedding_model()
-llm = build_llm()
-retriever = build_retriever()
-pricing_context = read_pricing_context()
+
+def get_retriever():
+    global retriever, retriever_configured
+    if not retriever_configured:
+        configure_embedding_model()
+        retriever = build_retriever()
+        retriever_configured = True
+    return retriever
+
+
+def get_pricing_context() -> str:
+    global pricing_context
+    if pricing_context is None:
+        pricing_context = read_pricing_context()
+    return pricing_context
 
 
 def _parse_percent(value: Any, field_name: str) -> float:
@@ -171,6 +198,16 @@ def _get_target_instance_type(instance_type: str) -> str | None:
 
 
 def _build_fleet_summary(billing_data: dict[str, Any], optimizable_instances: list[dict[str, Any]]) -> dict[str, Any]:
+    billing_analysis = analyze_billing.analyze_billing_data(billing_data)
+    enterprise_savings = billing_analysis.get("enterprise_summary", {}).get("enterprise_savings_summary", {})
+    if enterprise_savings:
+        return {
+            "total_monthly_cost": enterprise_savings.get("total_monthly_cost", 0),
+            "optimizable_resource_count": enterprise_savings.get("eligible_candidate_count", len(optimizable_instances)),
+            "estimated_monthly_savings": enterprise_savings.get("estimated_monthly_savings", 0),
+            "top_savings_opportunities": enterprise_savings.get("top_candidates", []),
+        }
+
     instances = _get_instances(billing_data)
     opportunities = []
     total_monthly_cost = sum(float(instance.get("monthly_cost", 0)) for instance in instances)
@@ -210,11 +247,7 @@ def _build_fleet_summary(billing_data: dict[str, Any], optimizable_instances: li
 
 
 def _is_low_utilization(instance: dict[str, Any]) -> bool:
-    metrics = instance.get("metrics", {})
-    avg_cpu = _parse_percent(metrics.get("avg_cpu_utilization", "100%"), "avg_cpu_utilization")
-    peak_cpu = _parse_percent(metrics.get("peak_cpu_utilization", "100%"), "peak_cpu_utilization")
-    avg_memory = _parse_percent(metrics.get("avg_memory_utilization", "100%"), "avg_memory_utilization")
-    return avg_cpu < 10.0 and peak_cpu <= 30.0 and avg_memory < 20.0
+    return analyze_billing.is_low_utilization(instance)
 
 
 # ==========================================
@@ -222,7 +255,15 @@ def _is_low_utilization(instance: dict[str, Any]) -> bool:
 # ==========================================
 def inspector_node(state: AgentState) -> AgentState:
     print("👀 [Inspector] 正在审阅 EC2 fleet 账单...")
-    instances = _get_instances(state["billing_data"])
+    billing_data = state["billing_data"]
+    instances = _get_instances(billing_data)
+    billing_analysis = analyze_billing.analyze_billing_data(billing_data)
+    enterprise_summary = billing_analysis.get("enterprise_summary", {})
+    enterprise_savings = enterprise_summary.get("enterprise_savings_summary", {})
+    candidate_ids = {
+        candidate["instance_id"]
+        for candidate in analyze_billing.savings_candidates(billing_data, instances)
+    }
     optimizable_instances = []
     protected_instances = []
 
@@ -231,12 +272,12 @@ def inspector_node(state: AgentState) -> AgentState:
         low_utilization = _is_low_utilization(instance)
         protected = bool(instance.get("protected"))
 
-        if low_utilization and protected:
-            protected_instances.append(instance)
-            print(f"👀 [Inspector] {instance_id} 利用率偏低，但已标记为不该动。")
-        elif low_utilization:
+        if instance_id in candidate_ids:
             optimizable_instances.append(instance)
             print(f"👀 [Inspector] {instance_id} 利用率偏低，可进入优化候选。")
+        elif low_utilization and protected:
+            protected_instances.append(instance)
+            print(f"👀 [Inspector] {instance_id} 利用率偏低，但已标记为不该动。")
         else:
             protected_instances.append({
                 **instance,
@@ -245,8 +286,12 @@ def inspector_node(state: AgentState) -> AgentState:
             print(f"👀 [Inspector] {instance_id} 利用率健康，不建议调整。")
 
     print(f"👀 [Inspector] 可优化资源 {len(optimizable_instances)} 个，不建议调整资源 {len(protected_instances)} 个。")
-    fleet_summary = _build_fleet_summary(state["billing_data"], optimizable_instances)
+    fleet_summary = _build_fleet_summary(billing_data, optimizable_instances)
     return {
+        "billing_analysis": billing_analysis,
+        "enterprise_summary": enterprise_summary,
+        "data_quality": billing_analysis.get("data_quality", {}),
+        "top_candidates": enterprise_savings.get("top_candidates", []),
         "needs_optimization": bool(optimizable_instances),
         "optimizable_instances": optimizable_instances,
         "protected_instances": protected_instances,
@@ -266,14 +311,15 @@ def researcher_node(state: AgentState) -> AgentState:
 
     query = "、".join(instance_types) + " 降级标准是什么？降级两档后的型号和价格各是多少？"
 
-    if retriever is None:
-        context = pricing_context
+    active_retriever = get_retriever()
+    if active_retriever is None:
+        context = get_pricing_context()
     else:
         try:
-            nodes = retriever.retrieve(query)
+            nodes = active_retriever.retrieve(query)
         except Exception as exc:
             print(f"⚠️ 查询向量数据库失败，将改用 Markdown 价格文档。原因：{exc}")
-            context = pricing_context
+            context = get_pricing_context()
         else:
             context = "\n\n".join(node.node.get_content() for node in nodes).strip()
 
@@ -284,41 +330,79 @@ def researcher_node(state: AgentState) -> AgentState:
     return {"rag_context": context}
 
 
+def _top_rows(value: Any, limit: int = 10) -> Any:
+    if isinstance(value, list):
+        return value[:limit]
+    return value
+
+
+def build_advisor_context(state: AgentState) -> dict[str, Any]:
+    billing_data = state["billing_data"]
+    billing_analysis = state.get("billing_analysis") or analyze_billing.analyze_billing_data(billing_data)
+    enterprise_summary = billing_analysis.get("enterprise_summary", {})
+    enterprise_savings = enterprise_summary.get("enterprise_savings_summary", {})
+
+    summarized_enterprise = {
+        "cost_by_team_service_environment": _top_rows(enterprise_summary.get("cost_by_team_service_environment", []), 15),
+        "cost_by_business_unit": _top_rows(enterprise_summary.get("cost_by_business_unit", []), 10),
+        "cost_by_service": _top_rows(enterprise_summary.get("cost_by_service", []), 10),
+        "cost_by_region": _top_rows(enterprise_summary.get("cost_by_region", []), 10),
+        "cost_by_pricing_model": _top_rows(enterprise_summary.get("cost_by_pricing_model", []), 10),
+        "criticality_mix": _top_rows(enterprise_summary.get("criticality_mix", []), 10),
+        "utilization_pattern_summary": _top_rows(enterprise_summary.get("utilization_pattern_summary", []), 10),
+        "top_waste_owners": _top_rows(enterprise_summary.get("top_waste_owners", []), 10),
+        "protected_resources_summary": _top_rows(enterprise_summary.get("protected_resources_summary", []), 10),
+        "missing_metrics_coverage": enterprise_summary.get("missing_metrics_coverage", {}),
+        "enterprise_savings_summary": {
+            **enterprise_savings,
+            "top_candidates": _top_rows(enterprise_savings.get("top_candidates", []), 10),
+        },
+    }
+
+    return {
+        "report": {
+            "report_id": billing_data.get("report_id"),
+            "source": billing_analysis.get("source"),
+            "generated_at": billing_analysis.get("generated_at"),
+            "resource_type": billing_data.get("resource_type"),
+            "primary_region": billing_data.get("region"),
+            "fleet_size": billing_analysis.get("fleet_size"),
+        },
+        "fleet_summary": state.get("fleet_summary", {}),
+        "data_quality": billing_analysis.get("data_quality", {}),
+        "enterprise_summary": summarized_enterprise,
+    }
+
+
+def build_advisor_prompt(state: AgentState, rag_context: str) -> str:
+    advisor_context = build_advisor_context(state)
+    return f"""
+请基于以下 EC2 fleet 企业级分析摘要和内部降级规则，写一份简明的 Markdown fleet-level 成本优化报告。
+
+【企业级分析上下文】
+{json.dumps(advisor_context, indent=2, ensure_ascii=False)}
+
+【知识库规则与价格】
+{rag_context}
+
+要求：
+1. 输出总月成本、可优化资源数量、预计节省金额和 savings rate。
+2. 输出 top savings opportunities，优先使用 enterprise_savings_summary.top_candidates。
+3. 说明 top waste owners、受保护资源、缺失指标覆盖率和主要风险。
+4. 输出 fleet-level 风险等级和推荐执行顺序。
+5. 金额、候选实例、风险等级必须来自企业级分析上下文；不要重新计算或编造实例明细。
+"""
+
+
 def advisor_node(state: AgentState) -> AgentState:
     print("✍️  [Advisor] 正在撰写 fleet-level 成本优化执行方案...")
-    data = state["billing_data"]
     context = state["rag_context"]
 
     sys_msg = SystemMessage(content="你是一名资深的 FinOps 云架构师。")
-    prompt = f"""
-请基于以下 EC2 fleet 账单信息、巡检结果和我们的内部降级规则，写一份简明的 Markdown fleet-level 成本优化报告。
-
-【原始账单】
-{json.dumps(data, indent=2, ensure_ascii=False)}
-
-【可优化资源】
-{json.dumps(state.get("optimizable_instances", []), indent=2, ensure_ascii=False)}
-
-【不该动资源】
-{json.dumps(state.get("protected_instances", []), indent=2, ensure_ascii=False)}
-
-【Fleet 汇总】
-{json.dumps(state.get("fleet_summary", {}), indent=2, ensure_ascii=False)}
-
-【知识库规则与价格】
-{context}
-
-要求：
-1. 输出总月成本。
-2. 输出可优化资源数量。
-3. 输出 top savings opportunities，并说明哪些资源低利用率、哪些资源不该动。
-4. 输出预计节省金额。
-5. 输出 fleet-level 风险等级。
-6. 输出推荐执行顺序。
-"""
+    prompt = build_advisor_prompt(state, context)
 
     try:
-        response = llm.invoke([sys_msg, HumanMessage(content=prompt)])
+        response = get_llm().invoke([sys_msg, HumanMessage(content=prompt)])
     except AuthenticationError as exc:
         fatal(f"API key 认证失败，请检查 OPENAI_API_KEY 是否正确。接口返回：{exc}")
     except APIStatusError as exc:
