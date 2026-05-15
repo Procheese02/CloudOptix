@@ -20,6 +20,7 @@ data/*.json
 data/*.csv
 
 .DS_Store
+.claude/
 .vscode/
 .idea/
 *.swp
