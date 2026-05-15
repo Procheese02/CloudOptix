@@ -61,7 +61,9 @@ Implemented capabilities:
 - Mock AWS fleet billing data ingestion
 - Billing feature analysis for CPU distribution, instance-type utilization, anomaly detection, cost share, and data quality
 - Optional read-only AWS Cost Explorer cost export into the same billing JSON structure
-- Dynamic mock EC2 fleet generator with 50+ reproducible instances
+- Dynamic enterprise mock EC2 fleet generator with 50+, 200, or 500+ reproducible instances
+- Enterprise analysis summary by team, service, environment, business unit, region, pricing model, criticality, and utilization pattern
+- Local SQLite persistence for scan snapshots, instances, metrics, recommendations, action plans, and approvals
 - Low-utilization instance detection across multiple EC2 instances
 - Protected-resource detection for instances that should not be changed
 - Fleet-level monthly cost and savings summary
@@ -107,6 +109,7 @@ CloudOptix is intentionally designed with infrastructure safety controls:
 - LangChain
 - LlamaIndex
 - Qdrant
+- SQLite / SQLAlchemy
 - OpenAI-compatible LLM API
 - AWS SDK for Python (`boto3`)
 - python-dotenv
@@ -122,6 +125,8 @@ CloudOptix is intentionally designed with infrastructure safety controls:
 ├── fetch_aws_pricing.py      # Optional AWS Pricing API exporter for real EC2 On-Demand prices
 ├── sync_mock_costs.py        # Sync mock billing costs from structured pricing data
 ├── analyze_billing.py        # Billing feature analysis and data quality checks
+├── persistence.py            # SQLite schema and persistence layer for scan snapshots
+├── persist_scan.py           # CLI for persisting billing analysis into SQLite
 ├── build_rag.py              # Local RAG index builder
 ├── test_llm.py               # LLM connectivity test
 ├── requirements.txt          # Python dependencies
@@ -183,10 +188,10 @@ python3 build_rag.py
 The default workflow uses `generate_mock.py`. This path is free, stable, and reproducible, so it is the recommended demo mode.
 
 ```bash
-python3 generate_mock.py --fleet-size 60 --seed 42 --output data/mock_billing.json
+python3 generate_mock.py --fleet-size 500 --seed 42 --output data/mock_billing.json
 ```
 
-The generator creates a reproducible 50+ instance EC2 fleet with healthy, underutilized, protected, minimum-size, and temporary autoscaling instances. The baseline mock billing file is committed as static demo data, so local development, tests, and offline demos can run without AWS credentials.
+The generator creates a reproducible enterprise EC2 fleet with business units, services, owners, criticality, per-instance regions, pricing models, utilization patterns, missing-metrics cases, protected resources, and temporary autoscaling instances. The baseline mock billing file is committed as static demo data, so local development, tests, and offline demos can run without AWS credentials.
 
 To keep the static mock data aligned with current AWS On-Demand prices, let the sync script refresh AWS Pricing API data first and then update the mock billing costs:
 
@@ -220,9 +225,28 @@ Run the feature analysis script to inspect utilization distribution, average uti
 python3 analyze_billing.py --billing-file data/mock_billing.json --output data/billing_analysis.json
 ```
 
-The output helps prioritize meaningful savings opportunities and flags whether the billing file has enough utilization coverage for rightsizing. Cost Explorer exports can also be analyzed this way, but they remain protected cost-only records until CloudWatch or Compute Optimizer utilization data is joined.
+The output includes `enterprise_summary`, which aggregates cost by team/service/environment, business unit, service, region, pricing model, criticality, and utilization pattern. It also includes top waste owners, protected-resource summaries, missing-metrics coverage, and enterprise savings estimates. Cost Explorer exports can also be analyzed this way, but they remain protected cost-only records until CloudWatch or Compute Optimizer utilization data is joined.
 
-### 7. Run the optimization workflow
+### 7. Persist scan snapshots locally
+
+Use the SQLite persistence layer when you want a durable local record of each scan before building dashboards, approval workflows, or trend analysis:
+
+```bash
+python3 persist_scan.py --billing-file data/mock_billing.json --db-file cloudoptix.db
+```
+
+The database uses six v1 tables:
+
+- `scans`: one billing and analysis run
+- `instances`: EC2 instance snapshots for the scan
+- `metrics`: CPU, memory, network, and missing-metrics state
+- `recommendations`: deterministic rightsizing candidates from `enterprise_summary`
+- `action_plans`: dry-run EC2 resize plans for recommendations
+- `approvals`: reserved for human approval records
+
+The persistence layer is intentionally snapshot-based: re-persisting the same `report_id` replaces that scan's rows, while different scans can keep independent copies of the same AWS instance IDs.
+
+### 8. Run the optimization workflow
 
 ```bash
 python3 tool.py --dry-run
@@ -240,10 +264,11 @@ The recommended demo chain is:
 
 ```bash
 python3 fetch_aws_pricing.py --region us-east-1 --output data/aws_pricing.json
-python3 generate_mock.py --fleet-size 60 --seed 42 --output data/mock_billing.json
+python3 generate_mock.py --fleet-size 500 --seed 42 --output data/mock_billing.json
 python3 sync_mock_costs.py --billing-file data/mock_billing.json --pricing-file data/aws_pricing.json --output data/mock_billing.json
 python3 build_rag.py
-python3 analyze_billing.py --billing-file data/mock_billing.json
+python3 analyze_billing.py --billing-file data/mock_billing.json --output data/billing_analysis.json
+python3 persist_scan.py --billing-file data/mock_billing.json --db-file cloudoptix.db
 python3 tool.py --dry-run --billing-file data/mock_billing.json
 ```
 

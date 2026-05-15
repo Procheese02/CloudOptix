@@ -19,6 +19,10 @@ data/*.json
 !data/aws_pricing.json
 data/*.csv
 
+*.db
+*.sqlite
+*.sqlite3
+
 .DS_Store
 .claude/
 .vscode/
